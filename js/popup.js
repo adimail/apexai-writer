@@ -5,6 +5,10 @@ import {
 } from "./config.js";
 import { renderContextualInputs, getContextualFormData } from "./ui.js";
 import { callLlmProvider } from "./llm.js";
+import {
+  saveEncryptedSettings,
+  loadDecryptedSettings,
+} from "./secure_storage.js";
 
 let appState = {
   currentView: "main",
@@ -14,14 +18,13 @@ let appState = {
     openai: null,
     google: null,
   },
-  selectedSituation: "",
   userName: "",
   isFocusOutputMode: false,
 };
 
 const mainView = document.getElementById("mainView");
 const settingsView = document.getElementById("settingsView");
-const resetOutputBtn = document.getElementById("resetOutputBtn"); // New
+const resetOutputBtn = document.getElementById("resetOutputBtn");
 
 const settingsBtn = document.getElementById("settingsBtn");
 const currentModelDisplay = document.getElementById("currentModelDisplay");
@@ -74,81 +77,74 @@ function isAiModelConfigured() {
 }
 
 async function initializeApp() {
-  await loadSettings();
+  const loadedSettings = await loadDecryptedSettings();
 
-  if (!isAiModelConfigured() && !appState.isFocusOutputMode) {
-    // Don't switch if already in focus mode (e.g. popup reopened)
+  if (loadedSettings) {
+    appState = {
+      ...appState,
+      ...loadedSettings,
+      apiKeys: {
+        openai: loadedSettings.apiKeys?.openai || null,
+        google: loadedSettings.apiKeys?.google || null,
+      },
+    };
+
+    console.log(
+      "Loaded settings from secure storage. Previous view (before reset):",
+      loadedSettings.currentView,
+    );
+  } else {
+    console.log("No settings found in secure storage, using defaults.");
+  }
+
+  appState.currentView = "main";
+  appState.isFocusOutputMode = false;
+
+  if (!isAiModelConfigured()) {
     appState.currentView = "settings";
-    if (settingsGlobalStatusP && appState.currentView === "settings") {
+    if (settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent =
         "Please configure LLM Provider, Model, and API Key to use the extension.";
       settingsGlobalStatusP.className = "settings-status error";
     }
   }
 
-  renderCurrentView(); // This will also call renderFocusMode if needed
+  console.log(
+    "Initializing popup. Effective start view:",
+    appState.currentView,
+  );
+
+  renderCurrentView();
   setupEventListeners();
   updateCurrentModelDisplay();
   validateMainForm();
   populateFixedCompanyInfo();
 }
 
-async function loadSettings() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["appSettingsV2"], (result) => {
-      if (result.appSettingsV2) {
-        const storedSettings = result.appSettingsV2;
-        const initialView =
-          storedSettings.currentView === "settings" ||
-          storedSettings.currentView === "main"
-            ? storedSettings.currentView
-            : "main";
-
-        appState = {
-          ...appState,
-          selectedProvider: storedSettings.selectedProvider || null,
-          selectedModel: storedSettings.selectedModel || null,
-          apiKeys: {
-            openai: storedSettings.apiKeys?.openai || null,
-            google: storedSettings.apiKeys?.google || null,
-          },
-          userName: storedSettings.userName || "",
-          isFocusOutputMode: storedSettings.isFocusOutputMode || false, // Load focus mode state
-          currentView: initialView,
-        };
-        console.log(
-          "Loaded settings from storage (v2). Initial view:",
-          initialView,
-        );
-      } else {
-        console.log("No settings (v2) found in storage, using defaults.");
-      }
-      resolve();
-    });
-  });
-}
-
-function saveAppSettings() {
+async function persistAppState() {
   const settingsToSave = {
     currentView: appState.currentView,
     selectedProvider: appState.selectedProvider,
     selectedModel: appState.selectedModel,
     apiKeys: appState.apiKeys,
     userName: appState.userName,
-    isFocusOutputMode: appState.isFocusOutputMode, // Save focus mode state
+    isFocusOutputMode: appState.isFocusOutputMode,
   };
-  chrome.storage.local.set({ appSettingsV2: settingsToSave }, () => {
-    console.log("App settings saved (v2):", settingsToSave);
-    updateCurrentModelDisplay();
-    validateMainForm();
-  });
+
+  try {
+    await saveEncryptedSettings(settingsToSave);
+  } catch (error) {
+    console.error("Failed to save settings securely:", error);
+  }
+
+  updateCurrentModelDisplay();
+  validateMainForm();
 }
 
 function renderFocusMode() {
   if (appState.isFocusOutputMode) {
     mainView.classList.add("focus-output-mode");
     if (settingsBtn) settingsBtn.style.display = "none";
-    // Ensure output section is visible if we are in focus mode and it has content or is loading
     if (
       outputTextDiv.innerHTML.trim() !== "" ||
       outputSectionDiv.classList.contains("error")
@@ -158,7 +154,6 @@ function renderFocusMode() {
   } else {
     mainView.classList.remove("focus-output-mode");
     if (settingsBtn) settingsBtn.style.display = "";
-    // Output section visibility will be handled by its content/error state
     if (
       outputTextDiv.textContent.trim() === "" &&
       !outputSectionDiv.classList.contains("error")
@@ -170,39 +165,31 @@ function renderFocusMode() {
 
 function renderCurrentView() {
   if (appState.currentView === "main") {
-    mainView.style.display = "flex"; // Changed to flex for focus mode layout
+    mainView.style.display = "flex";
     settingsView.style.display = "none";
-    settingsBtn.title = "Open Settings";
+    if (settingsBtn) settingsBtn.title = "Open Settings";
     if (settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent = "";
       settingsGlobalStatusP.className = "settings-status";
     }
-    renderFocusMode(); // Apply focus mode if active
+    renderFocusMode();
   } else {
-    // Settings view
     mainView.style.display = "none";
     settingsView.style.display = "block";
-    settingsBtn.title = "Back to Main View";
+    if (settingsBtn) settingsBtn.title = "Back to Main View";
     populateSettingsForm();
-    if (
-      !isAiModelConfigured() &&
-      settingsGlobalStatusP &&
-      !settingsGlobalStatusP.textContent
-    ) {
-      settingsGlobalStatusP.textContent =
-        "Please configure LLM Provider, Model, and API Key to use the extension.";
-      settingsGlobalStatusP.className = "settings-status error";
+  }
+
+  if (settingsBtn) {
+    if (appState.currentView === "main" && !appState.isFocusOutputMode) {
+      settingsBtn.textContent = "⚙️";
+    } else if (appState.currentView === "settings") {
+      settingsBtn.textContent = "";
     }
   }
-  // Adjust settings button icon based on current view
-  if (appState.currentView === "main" && !appState.isFocusOutputMode) {
-    settingsBtn.textContent = "⚙️";
-  } else if (appState.currentView === "settings") {
-    settingsBtn.textContent = ""; // Or a back arrow/done text
-  } // In focus mode, settingsBtn is hidden by renderFocusMode
 }
 
-function switchToView(viewName) {
+async function switchToView(viewName) {
   if (settingsGlobalStatusP) {
     settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
@@ -218,25 +205,30 @@ function switchToView(viewName) {
         "LLM not configured. Please complete settings to proceed.";
       settingsGlobalStatusP.className = "settings-status error";
     }
+
+    appState.currentView = "settings";
     if (appState.currentView === "settings") {
       populateSettingsForm();
     }
-    appState.currentView = "settings";
+
     renderCurrentView();
     return;
   }
 
   appState.currentView = viewName;
-  saveAppSettings();
+  await persistAppState();
   renderCurrentView();
 }
 
 function setupEventListeners() {
-  settingsBtn.addEventListener("click", () => {
-    if (appState.isFocusOutputMode) return; // Prevent settings if in focus mode
-    switchToView(appState.currentView === "main" ? "settings" : "main");
+  settingsBtn.addEventListener("click", async () => {
+    if (appState.isFocusOutputMode) return;
+    await switchToView(appState.currentView === "main" ? "settings" : "main");
   });
-  closeSettingsBtn.addEventListener("click", () => switchToView("main"));
+  closeSettingsBtn.addEventListener(
+    "click",
+    async () => await switchToView("main"),
+  );
 
   userPromptTextarea.addEventListener("input", validateMainForm);
   situationBtns.forEach((btn) => {
@@ -264,45 +256,43 @@ function setupEventListeners() {
   );
 
   document.querySelectorAll(".save-key-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => saveApiKey(e.target.dataset.provider));
+    btn.addEventListener(
+      "click",
+      async (e) => await saveApiKey(e.target.dataset.provider),
+    );
   });
   document.querySelectorAll(".clear-key-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) =>
-      clearApiKey(e.target.dataset.provider),
+    btn.addEventListener(
+      "click",
+      async (e) => await clearApiKey(e.target.dataset.provider),
     );
   });
 
   if (settingsUserNameInput) {
-    settingsUserNameInput.addEventListener("change", (e) => {
+    settingsUserNameInput.addEventListener("change", async (e) => {
       appState.userName = e.target.value.trim();
-      saveAppSettings();
+      await persistAppState();
     });
   }
 
-  // Event listener for the new Reset View button
   if (resetOutputBtn) {
-    resetOutputBtn.addEventListener("click", () => {
+    resetOutputBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
-      saveAppSettings(); // Save the change in mode
-      renderFocusMode(); // Revert UI from focus mode
 
-      outputTextDiv.innerHTML = ""; // Clear output content
-      outputSectionDiv.classList.remove("show", "error"); // Hide output section
+      outputTextDiv.innerHTML = "";
+      outputSectionDiv.classList.remove("show", "error");
 
-      // Reset generate button (it becomes visible again)
-      generateBtn.disabled = false; // Default, validateMainForm will adjust
+      await persistAppState();
+      renderFocusMode();
+
+      generateBtn.disabled = false;
       generateBtn.innerHTML = "Generate Message";
 
-      validateMainForm(); // Re-evaluate form and generate button state
-      renderCurrentView(); // Re-render to ensure settings button text is correct
+      validateMainForm();
+      renderCurrentView();
     });
   }
 }
-
-// ... ( _populateModelVersionsForProvider, populateSettingsForm, populateFixedCompanyInfo ) ...
-// ... ( handleSettingsProviderChange, handleSettingsModelChange, saveApiKey, clearApiKey ) ...
-// ... ( updateCurrentModelDisplay, validateMainForm ) ...
-// These functions remain largely the same as your previous version. I'll include them for completeness if they had minor changes.
 
 function _populateModelVersionsForProvider(provider) {
   settingsModelVersionSelect.innerHTML =
@@ -379,33 +369,41 @@ function populateFixedCompanyInfo() {
   }
 }
 
-function handleSettingsProviderChange() {
+async function handleSettingsProviderChange() {
   const provider = settingsModelProviderSelect.value;
   appState.selectedProvider = provider;
   appState.selectedModel = null;
   _populateModelVersionsForProvider(provider);
   settingsModelVersionSelect.value = "";
+
   settingsApiKeySectionOpenAI.style.display =
     provider === "openai" ? "block" : "none";
   settingsApiKeySectionGoogle.style.display =
     provider === "google" ? "block" : "none";
-  saveAppSettings();
+
+  await persistAppState();
   if (settingsGlobalStatusP) {
     settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
   }
+
+  validateMainForm();
+  updateCurrentModelDisplay();
 }
 
-function handleSettingsModelChange() {
+async function handleSettingsModelChange() {
   appState.selectedModel = settingsModelVersionSelect.value;
-  saveAppSettings();
+  await persistAppState();
   if (settingsGlobalStatusP) {
     settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
   }
+
+  validateMainForm();
+  updateCurrentModelDisplay();
 }
 
-function saveApiKey(provider) {
+async function saveApiKey(provider) {
   const inputEl =
     provider === "openai"
       ? settingsApiKeyInputOpenAI
@@ -419,7 +417,7 @@ function saveApiKey(provider) {
     statusEl.textContent = "API Key saved!";
     statusEl.className = "api-key-status success";
     inputEl.value = "********";
-    saveAppSettings();
+    await persistAppState();
     if (isAiModelConfigured() && settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent = "";
       settingsGlobalStatusP.className = "settings-status";
@@ -446,9 +444,12 @@ function saveApiKey(provider) {
       ? "api-key-status success"
       : "api-key-status";
   }, 2000);
+
+  validateMainForm();
+  updateCurrentModelDisplay();
 }
 
-function clearApiKey(provider) {
+async function clearApiKey(provider) {
   const inputEl =
     provider === "openai"
       ? settingsApiKeyInputOpenAI
@@ -460,7 +461,7 @@ function clearApiKey(provider) {
   inputEl.value = "";
   statusEl.textContent = "API Key cleared.";
   statusEl.className = "api-key-status";
-  saveAppSettings();
+  await persistAppState();
 
   if (
     !isAiModelConfigured() &&
@@ -474,6 +475,9 @@ function clearApiKey(provider) {
   setTimeout(() => {
     statusEl.textContent = "No key set.";
   }, 2000);
+
+  validateMainForm();
+  updateCurrentModelDisplay();
 }
 
 function updateCurrentModelDisplay() {
@@ -503,19 +507,22 @@ function validateMainForm() {
 async function generateMessage() {
   if (generateBtn.disabled || !isAiModelConfigured()) {
     if (!isAiModelConfigured()) {
-      displayOutput(
-        "Error: LLM Model is not configured. Please go to Settings to configure it.",
-        true,
-      );
+      appState.currentView = "settings";
+      await persistAppState();
+      renderCurrentView();
+      if (settingsGlobalStatusP) {
+        settingsGlobalStatusP.textContent =
+          "LLM not configured. Please complete settings to generate messages.";
+        settingsGlobalStatusP.className = "settings-status error";
+      }
     }
     return;
   }
 
   appState.isFocusOutputMode = true;
-  saveAppSettings(); // Save the change in mode
-  renderFocusMode(); // Apply UI changes for focus mode
+  await persistAppState();
+  renderFocusMode();
 
-  // Show loading state in the output area
   outputTextDiv.innerHTML =
     '<div class="spinner"></div><p class="loading-text">Generating message...</p>';
   outputSectionDiv.classList.add("show");
@@ -563,11 +570,12 @@ Instructions:
 
     const apiKey = appState.apiKeys[appState.selectedProvider];
     if (!apiKey) {
-      throw new Error(`API Key for ${appState.selectedProvider} is missing.`);
+      throw new Error(
+        `API Key for ${appState.selectedProvider} is missing. Please configure it in Settings.`,
+      );
     }
 
     const handleStreamChunk = (chunk) => {
-      // Clear spinner on first chunk
       if (outputTextDiv.querySelector(".spinner")) {
         outputTextDiv.innerHTML = "";
       }
@@ -587,24 +595,25 @@ Instructions:
       contextualData,
       handleStreamChunk,
     );
-    // If not streaming or if streaming finished, ensure spinner is gone and display full response
-    // displayOutput will handle clearing the spinner if it's still there (e.g., non-streaming case)
-    displayOutput(fullResponse || accumulatedResponse, false); // Use accumulated if fullResponse is empty from stream
+    displayOutput(fullResponse || accumulatedResponse, false);
   } catch (error) {
     console.error("Error generating message:", error);
-    displayOutput(
-      `Error generating message: ${error.message}. Check console for details.`,
-      true,
-    );
-  } finally {
-    // No need to manage generateBtn state here as it's hidden in focus mode.
-    // The reset button will handle restoring its state.
+    let errorMessage = `Error generating message: ${error.message}.`;
+    if (
+      error.message.includes("API Key") &&
+      error.message.includes("missing")
+    ) {
+      errorMessage += " Please check your API key in Settings.";
+    } else {
+      errorMessage += " Check console for details.";
+    }
+    displayOutput(errorMessage, true);
   }
 }
 
 function displayOutput(content, isError = false) {
-  outputTextDiv.innerHTML = ""; // Clear any previous content or spinner
-  outputTextDiv.textContent = content; // Set the final content
+  outputTextDiv.innerHTML = "";
+  outputTextDiv.textContent = content;
   outputSectionDiv.classList.add("show");
   if (isError) {
     outputSectionDiv.classList.add("error");
