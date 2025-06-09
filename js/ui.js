@@ -136,7 +136,7 @@ export function renderContextualInputs(
     case 'followup':
       situationSpecificFields = [
         {
-          label: 'Previous Interaction Date (Optional)',
+          label: 'Previous Interaction Date ',
           el: createDateInput('followupDate', 'previousInteractionDate'),
         },
         {
@@ -228,7 +228,7 @@ export function renderContextualInputs(
           ),
         },
         {
-          label: 'Your General Availability (Optional)',
+          label: 'Your General Availability ',
           el: createTextInput(
             'meetingAvailability',
             'e.g., Tue/Thu mornings next week',

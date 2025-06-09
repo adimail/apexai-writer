@@ -6,6 +6,30 @@ import {
   loadDecryptedSettings,
 } from "./secure_storage.js";
 
+const MESSAGE_LENGTH_OPTIONS = {
+  0: {
+    label: "Very Short",
+    promptInstruction:
+      "Ensure the response is extremely brief and concise, suitable for quick updates or acknowledgements. For emails, 1-2 short sentences. For messages, a few words to one short sentence.",
+  },
+  1: {
+    label: "Short",
+    promptInstruction:
+      "Generate a short and to-the-point response. For emails, aim for 2-3 concise sentences. For messages, one or two brief sentences.",
+  },
+  2: {
+    label: "Medium",
+    promptInstruction:
+      "Produce a standard, professionally balanced response in terms of length and detail. This is the default length.",
+  },
+  3: {
+    label: "Long",
+    promptInstruction:
+      "Provide a slightly more detailed response, offering more context or explanation if necessary, but maintain professional conciseness. Avoid excessive length; aim for clarity and completeness without being verbose.",
+  },
+};
+const DEFAULT_MESSAGE_LENGTH_KEY = "2";
+
 let appState = {
   currentView: "main",
   selectedProvider: null,
@@ -23,6 +47,7 @@ let appState = {
   selectedSituation: null,
   lastRecipientName: "",
   lastRecipientCompany: "",
+  preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY, // Store the key (0-3)
 };
 
 const mainView = document.getElementById("mainView");
@@ -73,6 +98,10 @@ const apiKeyStatusGoogle = document.getElementById("apiKeyStatusGoogle");
 const fixedCompanyInfoList = document.getElementById("fixedCompanyInfoList");
 const settingsGlobalStatusP = document.getElementById("settingsGlobalStatus");
 const settingsUserNameInput = document.getElementById("settingsUserName");
+const settingsMessageLengthSlider = document.getElementById(
+  "settingsMessageLength",
+);
+const messageLengthOutput = document.getElementById("messageLengthOutput");
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
@@ -100,6 +129,8 @@ async function initializeApp() {
       selectedSituation: loadedSettings.selectedSituation || null,
       lastRecipientName: loadedSettings.lastRecipientName || "",
       lastRecipientCompany: loadedSettings.lastRecipientCompany || "",
+      preferredMessageLength:
+        loadedSettings.preferredMessageLength || DEFAULT_MESSAGE_LENGTH_KEY,
     };
   }
   appState.generateButtonBaseText =
@@ -122,7 +153,6 @@ async function initializeApp() {
   numMessagesSelect.value = appState.numMessagesForSequence.toString();
   updateOutputTypeUI();
 
-  // If a situation was previously selected, activate its button and render inputs
   if (appState.selectedSituation) {
     const activeBtn = document.querySelector(
       `.situation-btn[data-situation="${appState.selectedSituation}"]`,
@@ -136,7 +166,15 @@ async function initializeApp() {
       appState.lastRecipientName,
       appState.lastRecipientCompany,
     );
-    setupContextualInputListeners(); 
+    setupContextualInputListeners();
+  }
+
+  // Initialize message length slider
+  if (settingsMessageLengthSlider && messageLengthOutput) {
+    settingsMessageLengthSlider.value = appState.preferredMessageLength;
+    messageLengthOutput.textContent =
+      MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]?.label ||
+      "Medium";
   }
 
   renderCurrentView();
@@ -159,6 +197,7 @@ async function persistAppState() {
     selectedSituation: appState.selectedSituation,
     lastRecipientName: appState.lastRecipientName,
     lastRecipientCompany: appState.lastRecipientCompany,
+    preferredMessageLength: appState.preferredMessageLength,
   };
 
   try {
@@ -253,7 +292,6 @@ function updateOutputTypeUI() {
     appState.generateButtonBaseText = "Generate Messages";
   }
   if (!generateBtn.disabled || generateBtn.innerHTML.includes("spinner")) {
-    // Only update if not currently loading
     if (!generateBtn.innerHTML.includes("spinner")) {
       generateBtn.textContent = appState.generateButtonBaseText;
     }
@@ -261,7 +299,6 @@ function updateOutputTypeUI() {
   validateMainForm();
 }
 
-// Function to set up listeners for contextual inputs (recipient name/company)
 function setupContextualInputListeners() {
   const recipientNameInput = document.getElementById("contextualRecipientName");
   const recipientCompanyInput = document.getElementById(
@@ -311,18 +348,17 @@ function setupEventListeners() {
 
   situationBtns.forEach((btn) => {
     btn.addEventListener("click", async () => {
-      // Made async
       situationBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       appState.selectedSituation = btn.dataset.situation;
       renderContextualInputs(
         appState.selectedSituation,
         contextualInputsContainer,
-        appState.lastRecipientName, // Pass stored values
+        appState.lastRecipientName,
         appState.lastRecipientCompany,
       );
-      setupContextualInputListeners(); // Re-attach listeners
-      await persistAppState(); // Persist selectedSituation
+      setupContextualInputListeners();
+      await persistAppState();
       validateMainForm();
     });
   });
@@ -359,6 +395,16 @@ function setupEventListeners() {
     });
   }
 
+  if (settingsMessageLengthSlider && messageLengthOutput) {
+    settingsMessageLengthSlider.addEventListener("input", async (e) => {
+      const lengthKey = e.target.value;
+      appState.preferredMessageLength = lengthKey;
+      messageLengthOutput.textContent =
+        MESSAGE_LENGTH_OPTIONS[lengthKey]?.label || "Medium";
+      await persistAppState();
+    });
+  }
+
   if (resetOutputBtn) {
     resetOutputBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
@@ -367,20 +413,6 @@ function setupEventListeners() {
       outputTextDiv.innerHTML = "";
       outputSectionDiv.classList.remove("show", "error");
       if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
-
-      // Optionally clear recipient fields on full reset, or keep them.
-      // For now, let's keep them as they are general context.
-      // appState.lastRecipientName = "";
-      // appState.lastRecipientCompany = "";
-      // if (appState.selectedSituation) {
-      //   renderContextualInputs(
-      //     appState.selectedSituation,
-      //     contextualInputsContainer,
-      //     appState.lastRecipientName,
-      //     appState.lastRecipientCompany
-      //   );
-      //   setupContextualInputListeners();
-      // }
 
       await persistAppState();
       renderFocusMode();
@@ -448,6 +480,13 @@ function populateSettingsForm() {
 
   if (settingsUserNameInput) {
     settingsUserNameInput.value = appState.userName || "";
+  }
+
+  if (settingsMessageLengthSlider && messageLengthOutput) {
+    settingsMessageLengthSlider.value = appState.preferredMessageLength;
+    messageLengthOutput.textContent =
+      MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]?.label ||
+      "Medium";
   }
 }
 
@@ -633,10 +672,14 @@ async function generateMessage() {
   generateBtn.innerHTML = `<div class="spinner"></div> Generating...`;
 
   let accumulatedResponse = "";
-  appState.rawLastLlmResponse = ""; // Reset before new generation
+  appState.rawLastLlmResponse = "";
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
   const writerName = appState.userName ? appState.userName : "an employee";
+  const lengthInstruction =
+    MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]
+      ?.promptInstruction ||
+    MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].promptInstruction;
 
   let systemPrompt = "";
 
@@ -670,9 +713,10 @@ Instructions:
 1.  Carefully review all the fixed company information and the user's specific requirements.
 2.  Generate an email that fulfills the task, incorporating relevant company details naturally.
 3.  Adhere to the desired tone: ${companyInfo.tone.toLowerCase()}.
-4.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
-5.  If the user's requirements are vague, make reasonable assumptions based on the company context.
-6.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
+4.  Regarding length: ${lengthInstruction}
+5.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
+6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
+7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
 `;
   } else {
     // message_sequence
@@ -699,18 +743,19 @@ User's Core Message & Additional Context (if provided):
 Instructions for Message Sequence:
 1.  Generate a sequence of ${numMessages} short, distinct messages.
 2.  Adapt the email-focused guideline and the user's core message into this sequence. Each message should be concise.
-3.  Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
-4.  After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
+3.  Regarding length for each message in the sequence: ${lengthInstruction}
+4.  Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
+5.  After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
     Example for ${numMessages} messages:
     MESSAGE 1:
     [Content of message 1]
     ${numMessages > 1 ? "---\nMESSAGE 2:\n[Content of message 2]" : ""}
     ${numMessages > 2 ? "---\nMESSAGE 3:\n[Content of message 3]" : ""}
     (Ensure the "---" separator is used correctly between messages if more than one.)
-5.  Ensure the messages form a coherent flow.
-6.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
-7.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
-8.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
+6.  Ensure the messages form a coherent flow.
+7.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
+8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
+9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
 `;
   }
 
@@ -722,9 +767,9 @@ Instructions for Message Sequence:
       );
     }
 
-    outputTextDiv.textContent = ""; // Clear for streaming
+    outputTextDiv.textContent = "";
     const handleStreamChunk = (chunk) => {
-      outputTextDiv.textContent += chunk; // Show raw stream
+      outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
       outputTextDiv.scrollTop = outputTextDiv.scrollHeight;
     };
@@ -801,7 +846,6 @@ function displayOutput(rawContent, isError = false, outputType = "email") {
         }
       });
     } else {
-      // Email or fallback
       outputTextDiv.textContent = actualContent;
     }
 

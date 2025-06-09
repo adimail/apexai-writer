@@ -209,6 +209,41 @@
           </p>
         </div>
 
+        <!-- General Settings Section -->
+        <div class="settings-section">
+          <h3>General Settings</h3>
+          <div class="form-group">
+            <label for="settingsMessageLength"
+              >Preferred Message Length:
+              <output id="messageLengthOutput" for="settingsMessageLength"
+                >Medium</output
+              ></label
+            >
+            <input
+              type="range"
+              id="settingsMessageLength"
+              min="0"
+              max="3"
+              value="2"
+              step="1"
+              list="messageLengthTicks"
+            />
+            <datalist id="messageLengthTicks">
+              <option value="0" label="Very Short"></option>
+              <option value="1" label="Short"></option>
+              <option value="2" label="Medium"></option>
+              <option value="3" label="Long"></option>
+            </datalist>
+            <p
+              class="settings-description"
+              style="font-size: 11px; margin-top: 5px"
+            >
+              Adjust the desired length of generated content. "Long" is still
+              professionally concise.
+            </p>
+          </div>
+        </div>
+
         <div class="settings-section">
           <h3>About APEXAI Writer</h3>
           <p class="settings-description">
@@ -226,8 +261,8 @@
         </div>
 
         <p class="settings-note">
-          LLM settings, API keys, and your name are saved locally in your
-          browser's extension storage securely.
+          LLM settings, API keys, your name, and general preferences are saved
+          locally in your browser's extension storage securely.
         </p>
       </div>
     </div>

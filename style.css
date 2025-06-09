@@ -158,7 +158,8 @@ select,
 textarea,
 input[type="password"],
 input[type="text"],
-input[type="date"] {
+input[type="date"],
+input[type="range"] {
   width: 100%;
   padding: var(--input-padding);
   border: 1px solid var(--input-border-color);
@@ -172,11 +173,18 @@ input[type="date"] {
     box-shadow 0.15s ease-in-out;
 }
 
+input[type="range"] {
+  padding: 0;
+  height: auto;
+  cursor: pointer;
+}
+
 select:focus,
 textarea:focus,
 input[type="password"]:focus,
 input[type="text"]:focus,
-input[type="date"]:focus {
+input[type="date"]:focus,
+input[type="range"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: var(--focus-shadow);
@@ -582,9 +590,30 @@ textarea {
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease;
-
 }
 
 .reset-btn:hover {
   background-color: var(--secondary-color-darker);
+}
+
+#settingsMessageLength {
+  margin-top: 4px;
+}
+
+#messageLengthOutput {
+  font-weight: normal;
+  color: var(--primary-color);
+  margin-left: 5px;
+}
+
+#messageLengthTicks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+#messageLengthTicks option {
+  padding: 0;
 }
