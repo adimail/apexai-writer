@@ -8,11 +8,10 @@ body {
   width: 420px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #333;
-  background-color: #f4f7f6;
 }
 
 .container {
-  background: white;
+  background: linear-gradient(to bottom, #5cb1e9, white);
   padding: 20px;
   min-height: 500px;
   max-height: 600px;
@@ -33,7 +32,7 @@ body {
 .logo {
   font-size: 24px;
   font-weight: bold;
-  color: #1a73b0;
+  color: #fff;
 }
 
 .settings-btn {
@@ -48,7 +47,7 @@ body {
   padding: 5px;
 }
 .settings-btn:hover {
-  color: #1a73b0;
+  color: #5cb1e9;
 }
 
 #mainView {
@@ -67,19 +66,19 @@ body {
 }
 
 #mainView.focus-output-mode #outputSection {
-  display: flex !important; /* Ensure it's flex for vertical layout */
-  flex-direction: column; /* Ensure vertical layout */
+  display: flex !important;
+  flex-direction: column;
   flex-grow: 1;
   height: auto;
   min-height: 200px;
-  max-height: none; /* Remove max-height constraint */
+  max-height: none;
   margin-bottom: 15px;
   border-left-width: 3px;
 }
 
 #mainView.focus-output-mode #outputSection .output-text {
-  max-height: none; /* Allow text to fill available space in focus mode */
-  flex-grow: 1; /* Ensure text area grows */
+  max-height: none;
+  flex-grow: 1;
 }
 
 #mainView.focus-output-mode #resetOutputBtn {
@@ -97,7 +96,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  margin-top: auto; /* Pushes to bottom if mainView is flex container */
+  margin-top: auto;
 }
 
 .reset-btn:hover {
@@ -195,7 +194,7 @@ textarea {
 #contextualInputsContainer .contextual-inputs-heading {
   font-size: 15px;
   font-weight: 600;
-  color: #1a73b0;
+  color: #5cb1e9;
   margin-bottom: 12px;
 }
 
@@ -222,7 +221,7 @@ textarea {
 .generate-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #1a73b0 0%, #258cd1 100%);
+  background: linear-gradient(135deg, #5cb1e9 0%, #258cd1 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -251,13 +250,13 @@ textarea {
   padding: 15px;
   background: #f8faff;
   border-radius: 8px;
-  border-left: 3px solid #1a73b0;
-  display: none; /* Toggled by .show class */
-  flex-direction: column; /* Stack text and actions vertically */
+  border-left: 3px solid #5cb1e9;
+  display: none;
+  flex-direction: column;
 }
 
 .output-section.show {
-  display: flex; /* Use flex when shown */
+  display: flex;
 }
 
 .output-text {
@@ -265,22 +264,37 @@ textarea {
   line-height: 1.5;
   color: #374151;
   white-space: pre-wrap;
-  overflow-y: auto; /* Scroll only the text if it's too long */
-  max-height: 150px; /* Adjust as needed for normal view */
-  margin-bottom: 10px; /* Space between text and buttons */
-  flex-shrink: 0; /* Prevent text area from shrinking too much */
+  overflow-y: auto;
+  max-height: 150px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.individual-message-block {
+  margin-bottom: 10px;
+}
+.individual-message-block pre {
+  white-space: pre-wrap;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+}
+.message-visual-separator {
+  border: none;
+  border-top: 1px dashed #ccc;
+  margin: 10px 0;
 }
 
 .output-actions {
   display: flex;
-  justify-content: flex-end; /* Align buttons to the right */
-  gap: 8px; /* Space between buttons */
-  flex-shrink: 0; /* Prevent action bar from shrinking */
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .copy-btn {
   padding: 7px 14px;
-  background: #1a73b0;
+  background: #5cb1e9;
   color: white;
   border: none;
   border-radius: 5px;
@@ -293,9 +307,8 @@ textarea {
 }
 
 .action-btn {
-  /* Style for the "Select Input Box" button */
   padding: 7px 14px;
-  background-color: #28a745; /* Green */
+  background-color: #28a745;
   color: white;
   border: none;
   border-radius: 5px;
@@ -355,11 +368,11 @@ textarea {
 }
 .settings-header h2 {
   font-size: 20px;
-  color: #1a73b0;
+  color: #000000;
 }
 
 .close-settings-btn {
-  background-color: #1a73b0;
+  background-color: #5cb1e9;
   color: white;
   border: none;
   padding: 8px 15px;

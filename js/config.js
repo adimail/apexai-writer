@@ -24,7 +24,7 @@ export const modelConfigs = {
   ],
 };
 
-export const apexAiCompanyInfo = {
+export const companyInfo = {
   name: "APEXAI",
   url: "https://www.apexai.company/",
   servicesPage: "https://www.apexai.company/services",
@@ -93,12 +93,14 @@ export const apexAiCompanyInfo = {
     "innovative, expert, reliable, results-driven, custom, integrated",
 };
 
-// Situation templates - these will now use the fixed apexAiCompanyInfo
+// Situation templates - these will now use the fixed companyInfo
+// These templates are primarily for emails, but the system prompt for message sequences
+// will instruct the LLM to adapt them.
 export const getSituationTemplates = () => ({
-  "cold-email": `Write a professional cold email that introduces our ${apexAiCompanyInfo.industry} company, ${apexAiCompanyInfo.name}. Focus on how our services (${apexAiCompanyInfo.servicesSummary}) can benefit the recipient. Keep it concise, personalized, and include a clear call-to-action. Use a ${apexAiCompanyInfo.tone} tone. Mention our website ${apexAiCompanyInfo.url} for more details.`,
-  followup: `Write a polite follow-up message. Reference previous communication or a recent interaction. Provide additional value or a new piece of information. Maintain engagement without being pushy. Our company is ${apexAiCompanyInfo.name}. Our tone is ${apexAiCompanyInfo.tone}.`,
-  "pitch-agency": `Create an agency pitch for ${apexAiCompanyInfo.name}. Highlight our expertise in services like ${apexAiCompanyInfo.servicesSummary}. Emphasize our unique value proposition: "${apexAiCompanyInfo.uniqueValue}". Tailor the pitch to address common client pain points in our industry. The tone should be ${apexAiCompanyInfo.tone}.`,
-  proposal: `Draft a section for a professional proposal for ${apexAiCompanyInfo.name}. This section should clearly articulate how our services (e.g., ${apexAiCompanyInfo.detailedServices.map((s) => s.name).join(", ")}) directly address the client's stated needs and objectives. Focus on benefits and outcomes. Our unique value is: "${apexAiCompanyInfo.uniqueValue}".`,
-  "meeting-request": `Write a professional meeting request from ${apexAiCompanyInfo.name}. Clearly state the purpose of the meeting, suggest a brief agenda, and offer flexible timing. Respect the recipient's time. Our tone is ${apexAiCompanyInfo.tone}.`,
-  "thank-you": `Compose a genuine thank-you message from ${apexAiCompanyInfo.name}. Express appreciation for a specific action or opportunity (e.g., a meeting, a referral, their business). Reinforce our professional relationship and commitment. The tone should be ${apexAiCompanyInfo.tone}.`,
+  "cold-email": `Write a professional cold email that introduces our ${companyInfo.industry} company, ${companyInfo.name}. Focus on how our services (${companyInfo.servicesSummary}) can benefit the recipient. Keep it concise, personalized, and include a clear call-to-action. Use a ${companyInfo.tone} tone. Mention our website ${companyInfo.url} for more details.`,
+  followup: `Write a polite follow-up message. Reference previous communication or a recent interaction. Provide additional value or a new piece of information. Maintain engagement without being pushy. Our company is ${companyInfo.name}. Our tone is ${companyInfo.tone}.`,
+  "pitch-agency": `Create an agency pitch for ${companyInfo.name}. Highlight our expertise in services like ${companyInfo.servicesSummary}. Emphasize our unique value proposition: "${companyInfo.uniqueValue}". Tailor the pitch to address common client pain points in our industry. The tone should be ${companyInfo.tone}.`,
+  proposal: `Draft a section for a professional proposal for ${companyInfo.name}. This section should clearly articulate how our services (e.g., ${companyInfo.detailedServices.map((s) => s.name).join(", ")}) directly address the client's stated needs and objectives. Focus on benefits and outcomes. Our unique value is: "${companyInfo.uniqueValue}".`,
+  "meeting-request": `Write a professional meeting request from ${companyInfo.name}. Clearly state the purpose of the meeting, suggest a brief agenda, and offer flexible timing. Respect the recipient's time. Our tone is ${companyInfo.tone}.`,
+  "thank-you": `Compose a genuine thank-you message from ${companyInfo.name}. Express appreciation for a specific action or opportunity (e.g., a meeting, a referral, their business). Reinforce our professional relationship and commitment. The tone should be ${companyInfo.tone}.`,
 });

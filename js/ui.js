@@ -1,4 +1,4 @@
-import { apexAiCompanyInfo } from "./config.js";
+import { companyInfo } from "./config.js";
 
 function createFormGroup(labelText, inputElement) {
   const group = document.createElement("div");
@@ -197,7 +197,7 @@ export function renderContextualInputs(situation, containerElement) {
           label: "Specific APEXAI Service to Highlight",
           el: createSelect(
             "pitchServiceHighlight",
-            apexAiCompanyInfo.detailedServices.map((s) => ({
+            companyInfo.detailedServices.map((s) => ({
               value: s.id,
               text: s.name,
             })),

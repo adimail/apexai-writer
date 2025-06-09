@@ -1,5 +1,3 @@
-// js/content_script.js
-
 (() => {
   // This IIFE structure helps avoid polluting the global scope of the page.
 

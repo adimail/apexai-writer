@@ -167,11 +167,27 @@ export async function callLlmProvider(
     // ];
 
     await new Promise((resolve) => setTimeout(resolve, 500)); // Shorter delay for simulation start
-    let simulatedResponse = `This is a simulated OpenAI (${model}) response for your request about "${userPrompt.substring(0, 50)}...".\n\n`;
-    simulatedResponse += `The model would elaborate based on the system prompt and user context. This simulation demonstrates how streaming might appear. Each word appears sequentially.`;
+
+    let simulatedResponse;
+    if (systemPrompt.includes("MESSAGE 1:") && systemPrompt.includes("---")) {
+      // Crude check for message sequence
+      const numMessages =
+        systemPrompt.match(/Generate a sequence of (\d+) short/)?.[1] || 2;
+      simulatedResponse = "";
+      for (let i = 1; i <= numMessages; i++) {
+        simulatedResponse += `MESSAGE ${i}:\nThis is simulated message ${i} of ${numMessages} for your request about "${userPrompt.substring(0, 30)}...". It's short and sweet for chat.\n`;
+        if (i < numMessages) {
+          simulatedResponse += "---\n";
+        }
+      }
+    } else {
+      // Email simulation
+      simulatedResponse = `This is a simulated OpenAI (${model}) email response for your request about "${userPrompt.substring(0, 50)}...".\n\n`;
+      simulatedResponse += `The model would elaborate based on the system prompt and user context. This simulation demonstrates how streaming might appear. Each word appears sequentially.`;
+    }
 
     if (typeof onChunkReceived === "function") {
-      const words = simulatedResponse.split(/(\s+)/); // Split by spaces, keeping spaces
+      const words = simulatedResponse.split(/(\s+|\n---\n)/); // Split by spaces or "---" lines, keeping them
       for (const word of words) {
         if (word) {
           // Avoid empty strings from multiple spaces

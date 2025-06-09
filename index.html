@@ -30,9 +30,32 @@
             ></textarea>
           </div>
 
-          <!-- Situation Selection -->
+          <!-- Output Type Selection -->
           <div class="form-group">
-            <label>Message Type</label>
+            <label for="outputTypeSelect">I want to write an...</label>
+            <select id="outputTypeSelect">
+              <option value="email" selected>Email</option>
+              <option value="message_sequence">
+                Message Sequence (for Chat/Social)
+              </option>
+            </select>
+          </div>
+
+          <!-- Number of Messages (conditional) -->
+          <div class="form-group" id="numMessagesGroup" style="display: none">
+            <label for="numMessagesSelect"
+              >Number of Messages in Sequence</label
+            >
+            <select id="numMessagesSelect">
+              <option value="1">1 Message</option>
+              <option value="2" selected>2 Messages</option>
+              <option value="3">3 Messages</option>
+            </select>
+          </div>
+
+          <!-- Situation Selection -->
+          <div class="form-group" id="situationSelectionGroup">
+            <label id="situationLabel">Email Type</label>
             <div class="situation-grid">
               <button class="situation-btn" data-situation="cold-email">
                 📧 Cold Email
@@ -65,7 +88,7 @@
           </div>
 
           <button class="generate-btn" id="generateBtn" disabled>
-            Generate Message
+            Generate Email
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 import {
   modelConfigs,
-  apexAiCompanyInfo,
+  companyInfo,
   getSituationTemplates,
 } from "./config.js";
 import { renderContextualInputs, getContextualFormData } from "./ui.js";
@@ -20,6 +20,10 @@ let appState = {
   },
   userName: "",
   isFocusOutputMode: false,
+  outputType: "email",
+  numMessagesForSequence: 2,
+  generateButtonBaseText: "Generate Email",
+  rawLastLlmResponse: "",
 };
 
 const mainView = document.getElementById("mainView");
@@ -30,6 +34,10 @@ const settingsBtn = document.getElementById("settingsBtn");
 const currentModelDisplay = document.getElementById("currentModelDisplay");
 
 const userPromptTextarea = document.getElementById("userPrompt");
+const outputTypeSelect = document.getElementById("outputTypeSelect");
+const numMessagesGroup = document.getElementById("numMessagesGroup");
+const numMessagesSelect = document.getElementById("numMessagesSelect");
+const situationLabel = document.getElementById("situationLabel");
 const situationBtns = document.querySelectorAll(".situation-btn");
 const contextualInputsContainer = document.getElementById(
   "contextualInputsContainer",
@@ -88,11 +96,16 @@ async function initializeApp() {
         openai: loadedSettings.apiKeys?.openai || null,
         google: loadedSettings.apiKeys?.google || null,
       },
+      outputType: loadedSettings.outputType || "email",
+      numMessagesForSequence: loadedSettings.numMessagesForSequence || 2,
     };
   }
+  appState.generateButtonBaseText =
+    appState.outputType === "email" ? "Generate Email" : "Generate Messages";
+  generateBtn.textContent = appState.generateButtonBaseText;
 
   appState.currentView = "main";
-  appState.isFocusOutputMode = false; // Ensure it's reset on init
+  appState.isFocusOutputMode = false;
 
   if (!isAiModelConfigured()) {
     appState.currentView = "settings";
@@ -102,6 +115,10 @@ async function initializeApp() {
       settingsGlobalStatusP.className = "settings-status error";
     }
   }
+
+  outputTypeSelect.value = appState.outputType;
+  numMessagesSelect.value = appState.numMessagesForSequence.toString();
+  updateOutputTypeUI();
 
   renderCurrentView();
   setupEventListeners();
@@ -118,6 +135,8 @@ async function persistAppState() {
     apiKeys: appState.apiKeys,
     userName: appState.userName,
     isFocusOutputMode: appState.isFocusOutputMode,
+    outputType: appState.outputType,
+    numMessagesForSequence: appState.numMessagesForSequence,
   };
 
   try {
@@ -199,6 +218,27 @@ async function switchToView(viewName) {
   renderCurrentView();
 }
 
+function updateOutputTypeUI() {
+  const selectedOutputType = appState.outputType;
+  if (selectedOutputType === "email") {
+    situationLabel.textContent = "Email Type";
+    numMessagesGroup.style.display = "none";
+    appState.generateButtonBaseText = "Generate Email";
+  } else {
+    // message_sequence
+    situationLabel.textContent = "Message Sequence Context";
+    numMessagesGroup.style.display = "block";
+    appState.generateButtonBaseText = "Generate Messages";
+  }
+  if (!generateBtn.disabled || generateBtn.innerHTML.includes("spinner")) {
+    // Only update if not currently loading
+    if (!generateBtn.innerHTML.includes("spinner")) {
+      generateBtn.textContent = appState.generateButtonBaseText;
+    }
+  }
+  validateMainForm();
+}
+
 function setupEventListeners() {
   settingsBtn.addEventListener("click", async () => {
     if (appState.isFocusOutputMode) return;
@@ -210,6 +250,21 @@ function setupEventListeners() {
   );
 
   userPromptTextarea.addEventListener("input", validateMainForm);
+
+  outputTypeSelect.addEventListener("change", async (e) => {
+    appState.outputType = e.target.value;
+    if (appState.outputType === "message_sequence") {
+      appState.numMessagesForSequence = parseInt(numMessagesSelect.value, 10);
+    }
+    updateOutputTypeUI();
+    await persistAppState();
+  });
+
+  numMessagesSelect.addEventListener("change", async (e) => {
+    appState.numMessagesForSequence = parseInt(e.target.value, 10);
+    await persistAppState();
+  });
+
   situationBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       situationBtns.forEach((b) => b.classList.remove("active"));
@@ -258,6 +313,7 @@ function setupEventListeners() {
   if (resetOutputBtn) {
     resetOutputBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
+      appState.rawLastLlmResponse = "";
 
       outputTextDiv.innerHTML = "";
       outputSectionDiv.classList.remove("show", "error");
@@ -267,7 +323,7 @@ function setupEventListeners() {
       renderFocusMode();
 
       generateBtn.disabled = false;
-      generateBtn.innerHTML = "Generate Message";
+      generateBtn.innerHTML = appState.generateButtonBaseText;
 
       validateMainForm();
     });
@@ -336,10 +392,10 @@ function populateFixedCompanyInfo() {
   if (fixedCompanyInfoList) {
     fixedCompanyInfoList.innerHTML = "";
     const infoToShow = {
-      "Company Name": apexAiCompanyInfo.name,
-      Industry: apexAiCompanyInfo.industry,
-      Website: apexAiCompanyInfo.url,
-      "Core Services": apexAiCompanyInfo.servicesSummary,
+      "Company Name": companyInfo.name,
+      Industry: companyInfo.industry,
+      Website: companyInfo.url,
+      "Core Services": companyInfo.servicesSummary,
     };
     for (const [key, value] of Object.entries(infoToShow)) {
       const li = document.createElement("li");
@@ -511,34 +567,37 @@ async function generateMessage() {
   renderFocusMode();
 
   generateBtn.disabled = true;
-  generateBtn.innerHTML = '<div class="spinner"></div> Generating...';
+  generateBtn.innerHTML = `<div class="spinner"></div> Generating...`;
 
   let accumulatedResponse = "";
+  appState.rawLastLlmResponse = ""; // Reset before new generation
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
+  const writerName = appState.userName ? appState.userName : "an employee";
 
-  try {
-    const writerName = appState.userName ? appState.userName : "an employee";
-    const systemPrompt = `
-You are an LLM assistant for ${apexAiCompanyInfo.name}.
-Your goal is to help employees write effective messages.
-The message is being written by ${writerName} from APEXAI.
+  let systemPrompt = "";
+
+  if (appState.outputType === "email") {
+    systemPrompt = `
+You are an LLM assistant for ${companyInfo.name}.
+Your goal is to help employees write effective emails.
+The email is being written by ${writerName} from APEXAI.
 
 Company Information (Fixed - Do Not Deviate):
-- Name: ${apexAiCompanyInfo.name}
-- Industry: ${apexAiCompanyInfo.industry}
-- Core Services: ${apexAiCompanyInfo.servicesSummary}
-- Detailed Services: ${apexAiCompanyInfo.detailedServices.map((s) => `${s.name}: ${s.tech}`).join("; ")}
-- Unique Value Proposition: "${apexAiCompanyInfo.uniqueValue}"
-- Desired Tone: ${apexAiCompanyInfo.tone}
-- Target Audience: ${apexAiCompanyInfo.targetAudience}
-- Brand Keywords: ${apexAiCompanyInfo.brandVoiceKeywords}
-- Website: ${apexAiCompanyInfo.url}
-- Services Page: ${apexAiCompanyInfo.servicesPage}
-- Projects Page: ${apexAiCompanyInfo.projectsPage}
+- Name: ${companyInfo.name}
+- Industry: ${companyInfo.industry}
+- Core Services: ${companyInfo.servicesSummary}
+- Detailed Services: ${companyInfo.detailedServices.map((s) => `${s.name}: ${s.tech}`).join("; ")}
+- Unique Value Proposition: "${companyInfo.uniqueValue}"
+- Desired Tone: ${companyInfo.tone}
+- Target Audience: ${companyInfo.targetAudience}
+- Brand Keywords: ${companyInfo.brandVoiceKeywords}
+- Website: ${companyInfo.url}
+- Services Page: ${companyInfo.servicesPage}
+- Projects Page: ${companyInfo.projectsPage}
 
 Task:
-The user wants to write a "${appState.selectedSituation.replace(/-/g, " ")}".
+The user wants to write an email for a "${appState.selectedSituation.replace(/-/g, " ")}" context.
 The general template/guideline for this task is: "${situationTemplates[appState.selectedSituation]}"
 
 User's Core Message & Additional Context (if provided):
@@ -546,13 +605,53 @@ User's Core Message & Additional Context (if provided):
 
 Instructions:
 1.  Carefully review all the fixed company information and the user's specific requirements.
-2.  Generate a message that fulfills the task, incorporating relevant company details naturally.
-3.  Adhere to the desired tone: ${apexAiCompanyInfo.tone.toLowerCase()}.
-4.  Ensure the message is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
+2.  Generate an email that fulfills the task, incorporating relevant company details naturally.
+3.  Adhere to the desired tone: ${companyInfo.tone.toLowerCase()}.
+4.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
 5.  If the user's requirements are vague, make reasonable assumptions based on the company context.
-6.  The output should be ONLY the generated message, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
+6.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
 `;
+  } else {
+    // message_sequence
+    const numMessages = appState.numMessagesForSequence;
+    systemPrompt = `
+You are an LLM assistant for ${companyInfo.name}.
+Your goal is to help ${writerName} write a sequence of effective short messages for platforms like Discord, WhatsApp, or Slack.
 
+Company Information (Fixed - Do Not Deviate):
+- Name: ${companyInfo.name}
+- Industry: ${companyInfo.industry}
+- Core Services (briefly, if relevant for short messages): ${companyInfo.servicesSummary}
+- Unique Value Proposition (if adaptable to short form): "${companyInfo.uniqueValue}"
+- Desired Tone: ${companyInfo.tone} (adapt for brevity on chat platforms)
+- Website: ${companyInfo.url}
+
+Task:
+The user wants to write a sequence of short messages for a "${appState.selectedSituation.replace(/-/g, " ")}" context.
+The general email-focused guideline for this task is: "${situationTemplates[appState.selectedSituation]}"
+
+User's Core Message & Additional Context (if provided):
+(This will be provided in the user message part of the prompt)
+
+Instructions for Message Sequence:
+1.  Generate a sequence of ${numMessages} short, distinct messages.
+2.  Adapt the email-focused guideline and the user's core message into this sequence. Each message should be concise.
+3.  Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
+4.  After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
+    Example for ${numMessages} messages:
+    MESSAGE 1:
+    [Content of message 1]
+    ${numMessages > 1 ? "---\nMESSAGE 2:\n[Content of message 2]" : ""}
+    ${numMessages > 2 ? "---\nMESSAGE 3:\n[Content of message 3]" : ""}
+    (Ensure the "---" separator is used correctly between messages if more than one.)
+5.  Ensure the messages form a coherent flow.
+6.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
+7.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
+8.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
+`;
+  }
+
+  try {
     const apiKey = appState.apiKeys[appState.selectedProvider];
     if (!apiKey) {
       throw new Error(
@@ -561,6 +660,11 @@ Instructions:
     }
 
     const handleStreamChunk = (chunk) => {
+      // For message sequences, we want to build up the raw response first
+      // and parse/display it once complete, or update display more carefully.
+      // For now, let's just append to outputTextDiv for live feedback,
+      // and the final parsing will happen on fullResponse.
+      // This might look a bit messy during streaming for sequences, but good for now.
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
       outputTextDiv.scrollTop = outputTextDiv.scrollHeight;
@@ -575,8 +679,12 @@ Instructions:
       contextualData,
       handleStreamChunk,
     );
-    const llmResult = fullResponse || accumulatedResponse;
-    displayOutput(llmResult || "No content generated.", false);
+    appState.rawLastLlmResponse = fullResponse || accumulatedResponse; // Store the final raw response
+    displayOutput(
+      appState.rawLastLlmResponse || "No content generated.",
+      false,
+      appState.outputType,
+    );
   } catch (error) {
     console.error("Error generating message:", error);
     let errorMessage = `Error generating message: ${error.message}.`;
@@ -588,42 +696,66 @@ Instructions:
     } else {
       errorMessage += " Check console for details.";
     }
-    displayOutput(errorMessage, true);
+    displayOutput(errorMessage, true, appState.outputType);
   } finally {
     generateBtn.disabled = false;
-    generateBtn.innerHTML = "Generate Message";
+    generateBtn.innerHTML = appState.generateButtonBaseText;
     validateMainForm();
   }
 }
 
-function displayOutput(content, isError = false) {
+function displayOutput(rawContent, isError = false, outputType = "email") {
   const placeholderText = "No content generated.";
-  const actualContent = content !== placeholderText ? content : "";
+  const actualContent = rawContent !== placeholderText ? rawContent : "";
+  appState.rawLastLlmResponse = actualContent; // Update with potentially cleaned content
 
-  outputTextDiv.innerHTML = "";
-  outputTextDiv.textContent = content;
+  outputTextDiv.innerHTML = ""; // Clear previous content
 
   if (isError) {
     outputSectionDiv.classList.add("error");
+    outputTextDiv.textContent = rawContent;
     if (selectInputBoxBtn) {
       selectInputBoxBtn.style.display = "none";
     }
   } else {
     outputSectionDiv.classList.remove("error");
+    if (outputType === "message_sequence" && actualContent) {
+      const parts = actualContent.split(/\n---\n/); // Split by the "---" separator line
+      parts.forEach((part, index) => {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "individual-message-block";
+
+        const contentPre = document.createElement("pre");
+        contentPre.textContent = part.trim(); // Trim each part
+        messageDiv.appendChild(contentPre);
+
+        outputTextDiv.appendChild(messageDiv);
+
+        if (index < parts.length - 1) {
+          const hr = document.createElement("hr");
+          hr.className = "message-visual-separator";
+          outputTextDiv.appendChild(hr);
+        }
+      });
+    } else {
+      // Email or fallback
+      outputTextDiv.textContent = actualContent;
+    }
+
     if (actualContent.trim() && selectInputBoxBtn) {
       selectInputBoxBtn.style.display = "inline-block";
     } else if (selectInputBoxBtn) {
       selectInputBoxBtn.style.display = "none";
     }
   }
-
   outputTextDiv.scrollTop = 0;
 }
 
 async function copyToClipboard() {
-  if (!outputTextDiv.textContent) return;
+  const textToCopy = appState.rawLastLlmResponse; // Use the stored raw response
+  if (!textToCopy) return;
   try {
-    await navigator.clipboard.writeText(outputTextDiv.textContent);
+    await navigator.clipboard.writeText(textToCopy);
     copyBtn.textContent = "Copied!";
     setTimeout(() => {
       copyBtn.textContent = "Copy to Clipboard";
@@ -638,7 +770,7 @@ async function copyToClipboard() {
 }
 
 async function handleSelectInputBox() {
-  const textToPaste = outputTextDiv.textContent;
+  const textToPaste = appState.rawLastLlmResponse; // Use the stored raw response
   const placeholderText = "No content generated.";
   if (!textToPaste || textToPaste === placeholderText) {
     console.warn("No actual text to paste for selection.");

@@ -262,6 +262,10 @@ export async function loadDecryptedSettings() {
   if (settings && typeof settings.apiKeys === "undefined") {
     settings.apiKeys = { openai: null, google: null };
   }
+  if (settings) {
+    settings.outputType = settings.outputType || "email";
+    settings.numMessagesForSequence = settings.numMessagesForSequence || 2;
+  }
 
   return settings;
 }
