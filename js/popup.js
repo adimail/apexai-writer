@@ -523,10 +523,13 @@ async function generateMessage() {
   await persistAppState();
   renderFocusMode();
 
-  outputTextDiv.innerHTML =
-    '<div class="spinner"></div><p class="loading-text">Generating message...</p>';
+  outputTextDiv.innerHTML = "";
   outputSectionDiv.classList.add("show");
   outputSectionDiv.classList.remove("error");
+
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = '<div class="spinner"></div> Generating...';
+
   let accumulatedResponse = "";
 
   const situationTemplates = getSituationTemplates();
@@ -576,9 +579,6 @@ Instructions:
     }
 
     const handleStreamChunk = (chunk) => {
-      if (outputTextDiv.querySelector(".spinner")) {
-        outputTextDiv.innerHTML = "";
-      }
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
       if (outputSectionDiv.classList.contains("show")) {
@@ -595,7 +595,10 @@ Instructions:
       contextualData,
       handleStreamChunk,
     );
-    displayOutput(fullResponse || accumulatedResponse, false);
+    displayOutput(
+      fullResponse || accumulatedResponse || "No content generated.",
+      false,
+    );
   } catch (error) {
     console.error("Error generating message:", error);
     let errorMessage = `Error generating message: ${error.message}.`;
@@ -608,6 +611,10 @@ Instructions:
       errorMessage += " Check console for details.";
     }
     displayOutput(errorMessage, true);
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.innerHTML = "Generate Message";
+    validateMainForm();
   }
 }
 
