@@ -15,6 +15,7 @@ let appState = {
     google: null,
   },
   selectedSituation: "",
+  userName: "",
 };
 
 const mainView = document.getElementById("mainView");
@@ -58,6 +59,9 @@ const settingsApiKeyInputGoogle = document.getElementById(
 const apiKeyStatusGoogle = document.getElementById("apiKeyStatusGoogle");
 const fixedCompanyInfoList = document.getElementById("fixedCompanyInfoList");
 const settingsGlobalStatusP = document.getElementById("settingsGlobalStatus");
+
+// New element for user name
+const settingsUserNameInput = document.getElementById("settingsUserName");
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
@@ -107,6 +111,7 @@ async function loadSettings() {
             openai: storedSettings.apiKeys?.openai || null,
             google: storedSettings.apiKeys?.google || null,
           },
+          userName: storedSettings.userName || "", // Load user name
           currentView: initialView,
         };
         console.log(
@@ -127,6 +132,7 @@ function saveAppSettings() {
     selectedProvider: appState.selectedProvider,
     selectedModel: appState.selectedModel,
     apiKeys: appState.apiKeys,
+    userName: appState.userName, // Save user name
   };
   chrome.storage.local.set({ appSettingsV2: settingsToSave }, () => {
     console.log("App settings saved (v2):", settingsToSave);
@@ -148,13 +154,13 @@ function renderCurrentView() {
   } else {
     mainView.style.display = "none";
     settingsView.style.display = "block";
-    settingsBtn.textContent = ""; // Consider an icon like "Back" or "Done" if space allows
-    settingsBtn.title = "Back to Main View"; // More descriptive title
+    settingsBtn.textContent = "";
+    settingsBtn.title = "Back to Main View";
     populateSettingsForm();
     if (
       !isAiModelConfigured() &&
       settingsGlobalStatusP &&
-      !settingsGlobalStatusP.textContent // Only set if not already showing a message
+      !settingsGlobalStatusP.textContent
     ) {
       settingsGlobalStatusP.textContent =
         "Please configure LLM Provider, Model, and API Key to use the extension.";
@@ -165,30 +171,27 @@ function renderCurrentView() {
 
 function switchToView(viewName) {
   if (settingsGlobalStatusP) {
-    settingsGlobalStatusP.textContent = ""; // Clear previous global status messages
+    settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
   }
 
-  // Prevent switching to main view if LLM is not configured
   if (viewName === "main" && !isAiModelConfigured()) {
     if (settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent =
         "LLM not configured. Please complete settings to proceed.";
       settingsGlobalStatusP.className = "settings-status error";
     }
-    // Ensure settings form is populated if user tries to leave settings prematurely
     if (appState.currentView === "settings") {
       populateSettingsForm();
     }
-    // Do not switch view, keep user in settings
-    appState.currentView = "settings"; // Force stay in settings
-    renderCurrentView(); // Re-render to ensure settings view is shown
+    appState.currentView = "settings";
+    renderCurrentView();
     return;
   }
 
   appState.currentView = viewName;
-  saveAppSettings(); // Save the new view state
-  renderCurrentView(); // Render the switched view
+  saveAppSettings();
+  renderCurrentView();
 }
 
 function setupEventListeners() {
@@ -230,6 +233,15 @@ function setupEventListeners() {
       clearApiKey(e.target.dataset.provider),
     );
   });
+
+  // Event listener for user name input
+  if (settingsUserNameInput) {
+    settingsUserNameInput.addEventListener("change", (e) => {
+      appState.userName = e.target.value.trim();
+      saveAppSettings();
+      // Optionally, provide feedback like "Name saved"
+    });
+  }
 }
 
 function _populateModelVersionsForProvider(provider) {
@@ -257,7 +269,6 @@ function populateSettingsForm() {
     if (providerModels.some((m) => m.value === appState.selectedModel)) {
       settingsModelVersionSelect.value = appState.selectedModel;
     } else {
-      // If selected model is no longer valid for the provider, reset it
       appState.selectedModel = null;
       settingsModelVersionSelect.value = "";
     }
@@ -285,11 +296,16 @@ function populateSettingsForm() {
   apiKeyStatusGoogle.className = appState.apiKeys.google
     ? "api-key-status success"
     : "api-key-status";
+
+  // Populate user name input
+  if (settingsUserNameInput) {
+    settingsUserNameInput.value = appState.userName || "";
+  }
 }
 
 function populateFixedCompanyInfo() {
   if (fixedCompanyInfoList) {
-    fixedCompanyInfoList.innerHTML = ""; // Clear existing
+    fixedCompanyInfoList.innerHTML = "";
     const infoToShow = {
       "Company Name": apexAiCompanyInfo.name,
       Industry: apexAiCompanyInfo.industry,
@@ -307,16 +323,16 @@ function populateFixedCompanyInfo() {
 function handleSettingsProviderChange() {
   const provider = settingsModelProviderSelect.value;
   appState.selectedProvider = provider;
-  appState.selectedModel = null; // Reset model when provider changes
+  appState.selectedModel = null;
   _populateModelVersionsForProvider(provider);
-  settingsModelVersionSelect.value = ""; // Clear selection
+  settingsModelVersionSelect.value = "";
   settingsApiKeySectionOpenAI.style.display =
     provider === "openai" ? "block" : "none";
   settingsApiKeySectionGoogle.style.display =
     provider === "google" ? "block" : "none";
   saveAppSettings();
   if (settingsGlobalStatusP) {
-    settingsGlobalStatusP.textContent = ""; // Clear global status on change
+    settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
   }
 }
@@ -325,7 +341,7 @@ function handleSettingsModelChange() {
   appState.selectedModel = settingsModelVersionSelect.value;
   saveAppSettings();
   if (settingsGlobalStatusP) {
-    settingsGlobalStatusP.textContent = ""; // Clear global status on change
+    settingsGlobalStatusP.textContent = "";
     settingsGlobalStatusP.className = "settings-status";
   }
 }
@@ -343,9 +359,8 @@ function saveApiKey(provider) {
     appState.apiKeys[provider] = newKey;
     statusEl.textContent = "API Key saved!";
     statusEl.className = "api-key-status success";
-    inputEl.value = "********"; // Mask the key after saving
+    inputEl.value = "********";
     saveAppSettings();
-    // If all settings are now complete, clear any global warning
     if (isAiModelConfigured() && settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent = "";
       settingsGlobalStatusP.className = "settings-status";
@@ -355,17 +370,15 @@ function saveApiKey(provider) {
     statusEl.className = "api-key-status error";
     return;
   } else {
-    // Key was '********' or unchanged empty
     statusEl.textContent = appState.apiKeys[provider]
       ? "Key remains unchanged."
       : "No key entered.";
     statusEl.className = appState.apiKeys[provider]
-      ? "api-key-status" // Neutral if key was already set and user entered '********'
-      : "api-key-status error"; // Error if no key was set and user entered nothing
+      ? "api-key-status"
+      : "api-key-status error";
     return;
   }
 
-  // Reset status message after a delay
   setTimeout(() => {
     statusEl.textContent = appState.apiKeys[provider]
       ? "Key is set."
@@ -385,12 +398,11 @@ function clearApiKey(provider) {
     provider === "openai" ? apiKeyStatusOpenAI : apiKeyStatusGoogle;
 
   appState.apiKeys[provider] = null;
-  inputEl.value = ""; // Clear the input field
+  inputEl.value = "";
   statusEl.textContent = "API Key cleared.";
   statusEl.className = "api-key-status";
   saveAppSettings();
 
-  // If clearing the key makes the configuration incomplete, show global warning
   if (
     !isAiModelConfigured() &&
     appState.currentView === "settings" &&
@@ -415,18 +427,17 @@ function updateCurrentModelDisplay() {
     );
     const modelLabel = modelConfig ? modelConfig.label : appState.selectedModel;
     currentModelDisplay.textContent = `Using: ${providerName} - ${modelLabel}`;
-    currentModelDisplay.style.color = "#333"; // Default/good color
+    currentModelDisplay.style.color = "#333";
   } else {
     currentModelDisplay.textContent =
       "⚠️ LLM Model not configured. Please check Settings.";
-    currentModelDisplay.style.color = "#dc3545"; // Error color
+    currentModelDisplay.style.color = "#dc3545";
   }
 }
 
 function validateMainForm() {
   const isFormComplete =
     appState.selectedSituation && userPromptTextarea.value.trim() !== "";
-  // Future: Add validation for required contextual inputs if any
   generateBtn.disabled = !(isAiModelConfigured() && isFormComplete);
 }
 
@@ -437,8 +448,6 @@ async function generateMessage() {
         "Error: LLM Model is not configured. Please go to Settings to configure it.",
         true,
       );
-      // Optionally, force switch to settings view
-      // switchToView("settings");
     }
     return;
   }
@@ -446,16 +455,18 @@ async function generateMessage() {
   generateBtn.disabled = true;
   generateBtn.innerHTML = '<div class="spinner"></div> Generating...';
   outputSectionDiv.classList.remove("show", "error");
-  outputTextDiv.textContent = ""; // Clear previous output for streaming
-  let accumulatedResponse = ""; // To store the full response from stream
+  outputTextDiv.textContent = "";
+  let accumulatedResponse = "";
 
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
 
   try {
+    const writerName = appState.userName ? appState.userName : "an employee";
     const systemPrompt = `
 You are an LLM assistant for ${apexAiCompanyInfo.name}.
 Your goal is to help employees write effective messages.
+The message is being written by ${writerName} from APEXAI.
 
 Company Information (Fixed - Do Not Deviate):
 - Name: ${apexAiCompanyInfo.name}
@@ -487,26 +498,21 @@ Instructions:
 `;
 
     const apiKey = appState.apiKeys[appState.selectedProvider];
-    // This check is technically redundant due to isAiModelConfigured, but good for safety.
     if (!apiKey) {
       throw new Error(`API Key for ${appState.selectedProvider} is missing.`);
     }
 
-    // Define the onChunkReceived callback for streaming
     const handleStreamChunk = (chunk) => {
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
-      // Auto-scroll the output section to show new content
       if (outputSectionDiv.classList.contains("show")) {
         outputSectionDiv.scrollTop = outputSectionDiv.scrollHeight;
       }
     };
 
-    // Make sure the output section is visible before streaming starts
     outputSectionDiv.classList.add("show");
     outputSectionDiv.classList.remove("error");
 
-    // Call LLM provider with the streaming callback
     const fullResponse = await callLlmProvider(
       appState.selectedProvider,
       appState.selectedModel,
@@ -514,30 +520,24 @@ Instructions:
       systemPrompt,
       userPromptTextarea.value,
       contextualData,
-      handleStreamChunk, // Pass the callback here
+      handleStreamChunk,
     );
 
-    // After streaming is complete, fullResponse contains the entire message.
-    // displayOutput can be used to ensure final state and styling, though textContent is already set.
-    // Using accumulatedResponse or fullResponse here should be equivalent if streaming was successful.
     displayOutput(fullResponse, false);
   } catch (error) {
     console.error("Error generating message:", error);
-    // If an error occurs, display it. outputTextDiv might have partial content from streaming.
-    // displayOutput will overwrite it with the error message.
     displayOutput(
       `Error generating message: ${error.message}. Check console for details.`,
       true,
     );
   } finally {
     generateBtn.textContent = "Generate Message";
-    // Re-validate form, which will enable/disable button based on current state
     validateMainForm();
   }
 }
 
 function displayOutput(content, isError = false) {
-  outputTextDiv.textContent = content; // Set the final content
+  outputTextDiv.textContent = content;
   outputSectionDiv.classList.add("show");
   if (isError) {
     outputSectionDiv.classList.add("error");
