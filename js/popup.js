@@ -16,10 +16,12 @@ let appState = {
   },
   selectedSituation: "",
   userName: "",
+  isFocusOutputMode: false,
 };
 
 const mainView = document.getElementById("mainView");
 const settingsView = document.getElementById("settingsView");
+const resetOutputBtn = document.getElementById("resetOutputBtn"); // New
 
 const settingsBtn = document.getElementById("settingsBtn");
 const currentModelDisplay = document.getElementById("currentModelDisplay");
@@ -59,8 +61,6 @@ const settingsApiKeyInputGoogle = document.getElementById(
 const apiKeyStatusGoogle = document.getElementById("apiKeyStatusGoogle");
 const fixedCompanyInfoList = document.getElementById("fixedCompanyInfoList");
 const settingsGlobalStatusP = document.getElementById("settingsGlobalStatus");
-
-// New element for user name
 const settingsUserNameInput = document.getElementById("settingsUserName");
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -76,7 +76,8 @@ function isAiModelConfigured() {
 async function initializeApp() {
   await loadSettings();
 
-  if (!isAiModelConfigured()) {
+  if (!isAiModelConfigured() && !appState.isFocusOutputMode) {
+    // Don't switch if already in focus mode (e.g. popup reopened)
     appState.currentView = "settings";
     if (settingsGlobalStatusP && appState.currentView === "settings") {
       settingsGlobalStatusP.textContent =
@@ -85,7 +86,7 @@ async function initializeApp() {
     }
   }
 
-  renderCurrentView();
+  renderCurrentView(); // This will also call renderFocusMode if needed
   setupEventListeners();
   updateCurrentModelDisplay();
   validateMainForm();
@@ -111,7 +112,8 @@ async function loadSettings() {
             openai: storedSettings.apiKeys?.openai || null,
             google: storedSettings.apiKeys?.google || null,
           },
-          userName: storedSettings.userName || "", // Load user name
+          userName: storedSettings.userName || "",
+          isFocusOutputMode: storedSettings.isFocusOutputMode || false, // Load focus mode state
           currentView: initialView,
         };
         console.log(
@@ -132,7 +134,8 @@ function saveAppSettings() {
     selectedProvider: appState.selectedProvider,
     selectedModel: appState.selectedModel,
     apiKeys: appState.apiKeys,
-    userName: appState.userName, // Save user name
+    userName: appState.userName,
+    isFocusOutputMode: appState.isFocusOutputMode, // Save focus mode state
   };
   chrome.storage.local.set({ appSettingsV2: settingsToSave }, () => {
     console.log("App settings saved (v2):", settingsToSave);
@@ -141,20 +144,44 @@ function saveAppSettings() {
   });
 }
 
+function renderFocusMode() {
+  if (appState.isFocusOutputMode) {
+    mainView.classList.add("focus-output-mode");
+    if (settingsBtn) settingsBtn.style.display = "none";
+    // Ensure output section is visible if we are in focus mode and it has content or is loading
+    if (
+      outputTextDiv.innerHTML.trim() !== "" ||
+      outputSectionDiv.classList.contains("error")
+    ) {
+      outputSectionDiv.classList.add("show");
+    }
+  } else {
+    mainView.classList.remove("focus-output-mode");
+    if (settingsBtn) settingsBtn.style.display = "";
+    // Output section visibility will be handled by its content/error state
+    if (
+      outputTextDiv.textContent.trim() === "" &&
+      !outputSectionDiv.classList.contains("error")
+    ) {
+      outputSectionDiv.classList.remove("show");
+    }
+  }
+}
+
 function renderCurrentView() {
   if (appState.currentView === "main") {
-    mainView.style.display = "block";
+    mainView.style.display = "flex"; // Changed to flex for focus mode layout
     settingsView.style.display = "none";
-    settingsBtn.textContent = "⚙️";
     settingsBtn.title = "Open Settings";
     if (settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent = "";
       settingsGlobalStatusP.className = "settings-status";
     }
+    renderFocusMode(); // Apply focus mode if active
   } else {
+    // Settings view
     mainView.style.display = "none";
     settingsView.style.display = "block";
-    settingsBtn.textContent = "";
     settingsBtn.title = "Back to Main View";
     populateSettingsForm();
     if (
@@ -167,6 +194,12 @@ function renderCurrentView() {
       settingsGlobalStatusP.className = "settings-status error";
     }
   }
+  // Adjust settings button icon based on current view
+  if (appState.currentView === "main" && !appState.isFocusOutputMode) {
+    settingsBtn.textContent = "⚙️";
+  } else if (appState.currentView === "settings") {
+    settingsBtn.textContent = ""; // Or a back arrow/done text
+  } // In focus mode, settingsBtn is hidden by renderFocusMode
 }
 
 function switchToView(viewName) {
@@ -175,7 +208,11 @@ function switchToView(viewName) {
     settingsGlobalStatusP.className = "settings-status";
   }
 
-  if (viewName === "main" && !isAiModelConfigured()) {
+  if (
+    viewName === "main" &&
+    !isAiModelConfigured() &&
+    !appState.isFocusOutputMode
+  ) {
     if (settingsGlobalStatusP) {
       settingsGlobalStatusP.textContent =
         "LLM not configured. Please complete settings to proceed.";
@@ -196,6 +233,7 @@ function switchToView(viewName) {
 
 function setupEventListeners() {
   settingsBtn.addEventListener("click", () => {
+    if (appState.isFocusOutputMode) return; // Prevent settings if in focus mode
     switchToView(appState.currentView === "main" ? "settings" : "main");
   });
   closeSettingsBtn.addEventListener("click", () => switchToView("main"));
@@ -234,15 +272,37 @@ function setupEventListeners() {
     );
   });
 
-  // Event listener for user name input
   if (settingsUserNameInput) {
     settingsUserNameInput.addEventListener("change", (e) => {
       appState.userName = e.target.value.trim();
       saveAppSettings();
-      // Optionally, provide feedback like "Name saved"
+    });
+  }
+
+  // Event listener for the new Reset View button
+  if (resetOutputBtn) {
+    resetOutputBtn.addEventListener("click", () => {
+      appState.isFocusOutputMode = false;
+      saveAppSettings(); // Save the change in mode
+      renderFocusMode(); // Revert UI from focus mode
+
+      outputTextDiv.innerHTML = ""; // Clear output content
+      outputSectionDiv.classList.remove("show", "error"); // Hide output section
+
+      // Reset generate button (it becomes visible again)
+      generateBtn.disabled = false; // Default, validateMainForm will adjust
+      generateBtn.innerHTML = "Generate Message";
+
+      validateMainForm(); // Re-evaluate form and generate button state
+      renderCurrentView(); // Re-render to ensure settings button text is correct
     });
   }
 }
+
+// ... ( _populateModelVersionsForProvider, populateSettingsForm, populateFixedCompanyInfo ) ...
+// ... ( handleSettingsProviderChange, handleSettingsModelChange, saveApiKey, clearApiKey ) ...
+// ... ( updateCurrentModelDisplay, validateMainForm ) ...
+// These functions remain largely the same as your previous version. I'll include them for completeness if they had minor changes.
 
 function _populateModelVersionsForProvider(provider) {
   settingsModelVersionSelect.innerHTML =
@@ -297,7 +357,6 @@ function populateSettingsForm() {
     ? "api-key-status success"
     : "api-key-status";
 
-  // Populate user name input
   if (settingsUserNameInput) {
     settingsUserNameInput.value = appState.userName || "";
   }
@@ -452,10 +511,15 @@ async function generateMessage() {
     return;
   }
 
-  generateBtn.disabled = true;
-  generateBtn.innerHTML = '<div class="spinner"></div> Generating...';
-  outputSectionDiv.classList.remove("show", "error");
-  outputTextDiv.textContent = "";
+  appState.isFocusOutputMode = true;
+  saveAppSettings(); // Save the change in mode
+  renderFocusMode(); // Apply UI changes for focus mode
+
+  // Show loading state in the output area
+  outputTextDiv.innerHTML =
+    '<div class="spinner"></div><p class="loading-text">Generating message...</p>';
+  outputSectionDiv.classList.add("show");
+  outputSectionDiv.classList.remove("error");
   let accumulatedResponse = "";
 
   const situationTemplates = getSituationTemplates();
@@ -503,15 +567,16 @@ Instructions:
     }
 
     const handleStreamChunk = (chunk) => {
+      // Clear spinner on first chunk
+      if (outputTextDiv.querySelector(".spinner")) {
+        outputTextDiv.innerHTML = "";
+      }
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
       if (outputSectionDiv.classList.contains("show")) {
         outputSectionDiv.scrollTop = outputSectionDiv.scrollHeight;
       }
     };
-
-    outputSectionDiv.classList.add("show");
-    outputSectionDiv.classList.remove("error");
 
     const fullResponse = await callLlmProvider(
       appState.selectedProvider,
@@ -522,8 +587,9 @@ Instructions:
       contextualData,
       handleStreamChunk,
     );
-
-    displayOutput(fullResponse, false);
+    // If not streaming or if streaming finished, ensure spinner is gone and display full response
+    // displayOutput will handle clearing the spinner if it's still there (e.g., non-streaming case)
+    displayOutput(fullResponse || accumulatedResponse, false); // Use accumulated if fullResponse is empty from stream
   } catch (error) {
     console.error("Error generating message:", error);
     displayOutput(
@@ -531,13 +597,14 @@ Instructions:
       true,
     );
   } finally {
-    generateBtn.textContent = "Generate Message";
-    validateMainForm();
+    // No need to manage generateBtn state here as it's hidden in focus mode.
+    // The reset button will handle restoring its state.
   }
 }
 
 function displayOutput(content, isError = false) {
-  outputTextDiv.textContent = content;
+  outputTextDiv.innerHTML = ""; // Clear any previous content or spinner
+  outputTextDiv.textContent = content; // Set the final content
   outputSectionDiv.classList.add("show");
   if (isError) {
     outputSectionDiv.classList.add("error");
