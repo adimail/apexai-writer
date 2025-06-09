@@ -1,271 +1,215 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>APEXAI Writer</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div class="logo">APEXAI Writer</div>
-        <button id="settingsBtn" class="settings-btn" title="Settings">
-          ⚙️
-        </button>
-      </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>APEXAI Writer Chrome Extension Documentation</title>
+        <style>
+            :root {
+                --bg: #282828;
+                --fg: #ebdbb2;
+                --red: #cc241d;
+                --green: #98971a;
+                --yellow: #d79921;
+                --blue: #458588;
+                --purple: #b16286;
+                --aqua: #689d6a;
+                --orange: #d65d0e;
+                --gray: #a89984;
+            }
 
-      <!-- Main View -->
-      <div id="mainView">
-        <div id="inputControlsContainer">
-          <div class="current-model-display" id="currentModelDisplay">
-            Configure LLM in Settings
-          </div>
-          <!-- User Prompt -->
-          <div class="form-group">
-            <label>Your Core Message Context</label>
-            <textarea
-              id="userPrompt"
-              placeholder="Describe the main points you want to communicate..."
-            ></textarea>
-          </div>
+            body {
+                font-family: monospace;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                line-height: 1.6;
+                background-color: var(--bg);
+                color: var(--fg);
+            }
 
-          <!-- Output Type Selection -->
-          <div class="form-group">
-            <label for="outputTypeSelect">I want to write an...</label>
-            <select id="outputTypeSelect">
-              <option value="email" selected>Email</option>
-              <option value="message_sequence">
-                Message Sequence (for Chat/Social)
-              </option>
-            </select>
-          </div>
+            h1, h2, h3 {
+                color: var(--yellow);
+            }
 
-          <!-- Number of Messages (conditional) -->
-          <div class="form-group" id="numMessagesGroup" style="display: none">
-            <label for="numMessagesSelect"
-              >Number of Messages in Sequence</label
-            >
-            <select id="numMessagesSelect">
-              <option value="1">1 Message</option>
-              <option value="2" selected>2 Messages</option>
-              <option value="3">3 Messages</option>
-            </select>
-          </div>
+            pre {
+                background: var(--gray);
+                color: var(--bg);
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+                cursor: pointer;
+            }
 
-          <!-- Situation Selection -->
-          <div class="form-group" id="situationSelectionGroup">
-            <label id="situationLabel">Email Type</label>
-            <div class="situation-grid">
-              <button class="situation-btn" data-situation="cold-email">
-                📧 Cold Email
-              </button>
-              <button class="situation-btn" data-situation="followup">
-                🔄 Follow-up
-              </button>
-              <button class="situation-btn" data-situation="pitch-agency">
-                🎯 Agency Pitch
-              </button>
-              <button class="situation-btn" data-situation="proposal">
-                📋 Proposal
-              </button>
-              <button class="situation-btn" data-situation="meeting-request">
-                🗓️ Meeting Request
-              </button>
-              <button class="situation-btn" data-situation="thank-you">
-                🙏 Thank You
-              </button>
-            </div>
-          </div>
+            code {
+                /* Minor styling for inline code to distinguish it slightly if needed,
+                   though monospace font from body is often enough.
+                   Keeping it subtle to match inspiration's lack of specific inline code style. */
+                /* background-color: #3c3836; */ /* Slightly different from main bg */
+                /* padding: 0.2em 0.4em; */
+                /* border-radius: 3px; */
+            }
 
-          <!-- Contextual Inputs Container -->
-          <div
-            id="contextualInputsContainer"
-            class="form-group"
-            style="margin-top: 15px"
-          >
-            <!-- Dynamic inputs will be rendered here by js/ui.js -->
-          </div>
+            a {
+                color: var(--blue);
+                text-decoration: none;
+            }
 
-          <button class="generate-btn" id="generateBtn" disabled>
-            Generate Email
-          </button>
-        </div>
+            a:hover {
+                color: var(--aqua);
+            }
 
-        <!-- Output Section -->
-        <div class="output-section" id="outputSection">
-          <div class="output-text" id="outputText"></div>
-          <div class="output-actions">
-            <button class="copy-btn" id="copyBtn">Copy to Clipboard</button>
-            <button
-              class="action-btn"
-              id="selectInputBoxBtn"
-              style="display: none"
-            >
-              Select Input Box
-            </button>
-          </div>
-        </div>
-        <button id="resetOutputBtn" class="reset-btn" style="display: none">
-          Reset View
-        </button>
-      </div>
+            hr {
+                border: 1px solid var(--orange);
+                margin: 40px 0;
+            }
 
-      <!-- Settings View (initially hidden) -->
-      <div id="settingsView" style="display: none">
-        <div class="settings-header">
-          <h2>Settings</h2>
-          <button id="closeSettingsBtn" class="close-settings-btn">Done</button>
-        </div>
+            footer {
+                text-align: center;
+                margin-top: 50px;
+            }
 
-        <p
-          id="settingsGlobalStatus"
-          class="settings-status"
-          style="text-align: center; margin-bottom: 10px"
-        ></p>
+            img {
+                width: 100%;
+                max-width: 700px; /* Added max-width to prevent overly large images */
+                display: block; /* For centering with margin auto */
+                margin: 20px auto; /* Centered images */
+                border: 2px solid var(--yellow);
+                border-radius: 5px;
+            }
 
-        <div class="settings-section">
-          <h3>LLM Configuration</h3>
-          <div class="form-group">
-            <label for="settingsModelProvider">Model Provider</label>
-            <select id="settingsModelProvider">
-              <option value="">Select LLM Provider</option>
-              <option value="openai">OpenAI (GPT)</option>
-              <option value="google">Google (Gemini)</option>
-            </select>
-          </div>
+            ul {
+                list-style-type: square;
+                color: var(--orange); /* This colors the bullet */
+                padding-left: 20px; /* Standard padding for lists */
+            }
 
-          <div class="form-group">
-            <label for="settingsModelVersion">Model Version</label>
-            <select id="settingsModelVersion" disabled>
-              <option value="">Choose model version</option>
-            </select>
-          </div>
+            li {
+                margin-bottom: 10px; /* Increased slightly for better readability */
+                color: var(--fg); /* Ensure list item text color is --fg */
+            }
 
-          <div
-            id="settingsApiKeySectionOpenAI"
-            class="api-key-group"
-            style="display: none"
-          >
-            <div class="form-group">
-              <label for="settingsApiKeyOpenAI">OpenAI API Key</label>
-              <input
-                type="password"
-                id="settingsApiKeyOpenAI"
-                placeholder="Enter OpenAI API Key"
-              />
-              <div class="api-key-actions">
-                <button class="save-key-btn" data-provider="openai">
-                  Save Key
-                </button>
-                <button class="clear-key-btn" data-provider="openai">
-                  Clear Key
-                </button>
-              </div>
-              <p class="api-key-status" id="apiKeyStatusOpenAI"></p>
-            </div>
-          </div>
-          <div
-            id="settingsApiKeySectionGoogle"
-            class="api-key-group"
-            style="display: none"
-          >
-            <div class="form-group">
-              <label for="settingsApiKeyGoogle">Google API Key</label>
-              <input
-                type="password"
-                id="settingsApiKeyGoogle"
-                placeholder="Enter Google API Key"
-              />
-              <div class="api-key-actions">
-                <button class="save-key-btn" data-provider="google">
-                  Save Key
-                </button>
-                <button class="clear-key-btn" data-provider="google">
-                  Clear Key
-                </button>
-              </div>
-              <p class="api-key-status" id="apiKeyStatusGoogle"></p>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>Your Information</h3>
-          <div class="form-group">
-            <label for="settingsUserName">Your Name (Writer)</label>
-            <input
-              type="text"
-              id="settingsUserName"
-              placeholder="Enter your name"
-            />
-          </div>
-          <p
-            class="settings-description"
-            style="font-size: 11px; margin-top: 5px"
-          >
-            This name will be used to indicate who is writing the message from
-            APEXAI.
-          </p>
-        </div>
-
-        <!-- General Settings Section -->
-        <div class="settings-section">
-          <h3>General Settings</h3>
-          <div class="form-group">
-            <label for="settingsMessageLength"
-              >Preferred Message Length:
-              <output id="messageLengthOutput" for="settingsMessageLength"
-                >Medium</output
-              ></label
-            >
-            <input
-              type="range"
-              id="settingsMessageLength"
-              min="0"
-              max="3"
-              value="2"
-              step="1"
-              list="messageLengthTicks"
-            />
-            <datalist id="messageLengthTicks">
-              <option value="0" label="Very Short"></option>
-              <option value="1" label="Short"></option>
-              <option value="2" label="Medium"></option>
-              <option value="3" label="Long"></option>
-            </datalist>
-            <p
-              class="settings-description"
-              style="font-size: 11px; margin-top: 5px"
-            >
-              Adjust the desired length of generated content. "Long" is still
-              professionally concise.
-            </p>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>About APEXAI Writer</h3>
-          <p class="settings-description">
-            This extension helps you craft messages using LLM, tailored with
-            APEXAI's company information. Our company details are fixed and
-            automatically used by the LLM:
-          </p>
-          <ul
-            id="fixedCompanyInfoList"
-            class="settings-description"
-            style="list-style-position: inside; padding-left: 10px"
-          >
-            <!-- Fixed info will be populated by JS -->
-          </ul>
-        </div>
-
-        <p class="settings-note">
-          LLM settings, API keys, your name, and general preferences are saved
-          locally in your browser's extension storage securely.
+            /* Styling for nested lists to ensure they also get the theme colors */
+            ul ul {
+                margin-top: 5px;
+                /* list-style-type: circle; /* Optionally change bullet for nested lists */
+            }
+        </style>
+    </head>
+    <body>
+        <h1>APEXAI Writer Chrome Extension</h1>
+        <p>
+            <strong>APEXAI Writer Chrome Extension</strong> is a Chrome extension that helps generate messages & emails. It serves as a specialized writing assistant for APEXAI personnel.
         </p>
-      </div>
-    </div>
-    <script type="module" src="js/popup.js"></script>
-  </body>
+
+        <h2>Usage</h2>
+        <p>To get started with the extension:</p>
+        <ul>
+            <li>Download or clone this repository.</li>
+            <li>Open <code><a href="chrome://extensions/" target="_blank">chrome://extensions/</a></code> in your Chrome browser.</li>
+            <li>Ensure "Developer mode" is turned on (usually a toggle in the top right).</li>
+            <li>Click the "Load unpacked" button.</li>
+            <li>Navigate to and select the directory where you downloaded/cloned this repository.</li>
+        </ul>
+
+        <h2>Initial Configuration</h2>
+        <p>Follow these steps after installation:</p>
+        <ul>
+            <li>After loading, the extension might open its Settings page automatically. If not, click the extension icon and navigate to Settings.</li>
+            <li>Configure an LLM provider (OpenAI or Google).</li>
+            <li>Select your preferred model from the available options.</li>
+            <li>Enter your API key for the chosen provider.</li>
+            <li>Set your name in the settings; this will be used in prompts to indicate who is writing the message.</li>
+        </ul>
+
+        <h2>Screenshots</h2>
+        <img src="docs/preview.png" alt="APEXAI Writer Preview" />
+        <hr />
+        <img src="docs/work.png" alt="APEXAI Writer in action" />
+        <p style="text-align: center; color: var(--gray);"><em>Output Example:</em></p>
+        <img src="docs/output.png" alt="APEXAI Writer output example" />
+
+        <h2>Security</h2>
+        <p>
+            We take the security of your data, especially your LLM API keys, very seriously. Here are the key measures implemented in the APEXAI Writer Chrome Extension to ensure your information is handled securely:
+        </p>
+
+        <h3>API Key Protection</h3>
+        <p>Your LLM API keys are sensitive credentials, and we've implemented robust measures to protect them:</p>
+        <ul>
+            <li>
+                <strong>Local Storage Only</strong>: API keys (for OpenAI and Google) are stored exclusively on your local computer using <code>chrome.storage.local</code>. This storage is sandboxed and private to this extension, meaning other extensions or websites cannot directly access it.
+            </li>
+            <li>
+                <strong>Strong Encryption at Rest</strong>: Before being saved to local storage, your API keys are encrypted using <strong>AES-GCM 256-bit encryption</strong>. This is a strong, authenticated encryption algorithm widely recognized for its security.
+            </li>
+            <li>
+                <strong>Secure Encryption Key Management</strong>:
+                <ul>
+                    <li>A unique, cryptographically strong master encryption key is generated by the extension the first time it's needed.</li>
+                    <li>This master key is itself stored securely as a JSON Web Key (JWK) within <code>chrome.storage.local</code>, accessible only by this extension.</li>
+                    <li>This master key is used solely for encrypting and decrypting your LLM API keys. Each API key (OpenAI, Google) is individually encrypted.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>HTTPS Transmission</strong>: When the extension communicates with your chosen LLM provider (OpenAI or Google), your API keys are transmitted over <strong>HTTPS (TLS encrypted)</strong> connections. This ensures that your keys are encrypted and protected while in transit between your browser and the LLM provider's servers.
+            </li>
+        </ul>
+
+        <h3>Minimal and Contextual Permissions</h3>
+        <p>The extension is designed to operate with the minimum necessary permissions:</p>
+        <ul>
+            <li>
+                <strong><code>storage</code></strong>: Required to save your settings and encrypted API keys locally.
+            </li>
+            <li>
+                <strong><code>clipboardWrite</code></strong>: Used only when you explicitly click the "Copy to Clipboard" button.
+            </li>
+            <li>
+                <strong><code>activeTab</code> & <code>scripting</code></strong>:
+                <ul>
+                    <li>Instead of requesting broad access to all websites (e.g., <code><all_urls></code>), the extension uses the <code>activeTab</code> permission combined with <code>scripting</code>.</li>
+                    <li>This means the extension can only interact with the content of the web page you are currently viewing <em>and only after</em> you explicitly invoke a feature that requires it (like clicking the "Select Input Box" button to paste generated text).</li>
+                    <li>This approach significantly enhances your privacy and security by limiting the extension's access to web content.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>Data Privacy & Handling</h3>
+        <p>Key aspects of data privacy and handling include:</p>
+        <ul>
+            <li>
+                <strong>No External APEXAI Servers</strong>: This extension operates entirely client-side within your browser. Your API keys, prompts, generated content, or any personal information like your name (used for prompts) are <strong>never sent to, processed by, or stored on any APEXAI-owned servers or any third-party servers</strong>, other than the LLM providers you directly configure (OpenAI or Google).
+            </li>
+            <li>
+                <strong>Local Settings</strong>: All your preferences, including selected models, your name for prompts, and preferred message length, are stored locally alongside your encrypted API keys.
+            </li>
+            <li>
+                <strong>Fixed Company Information</strong>: The APEXAI company information used to enrich prompts is embedded directly within the extension (e.g., in <code>js/config.js</code>) and is not fetched from external sources, ensuring its integrity and consistency.
+            </li>
+        </ul>
+
+        <h3>Content Security Policy (CSP)</h3>
+        <p>
+            The extension's user interface (the popup window) operates under a strict <strong>Content Security Policy</strong> (e.g., <code>script-src 'self'; object-src 'self';</code>). This policy helps mitigate common web vulnerabilities like Cross-Site Scripting (XSS) by restricting where scripts and other resources can be loaded from, enhancing the security of the extension's own pages.
+        </p>
+
+        <h3>Content Scripting</h3>
+        <p>The content script (e.g., <code>js/content_script.js</code>), which enables pasting text into web pages, is designed with security in mind:</p>
+        <ul>
+            <li>It is only injected into a page when you explicitly activate the "Select Input Box" feature.</li>
+            <li>It is designed to carefully identify eligible input fields before pasting.</li>
+            <li>The text pasted originates from the LLM via the extension's secure popup, not directly from potentially untrusted web page content.</li>
+        </ul>
+
+        <hr />
+        <footer>
+            <p>APEXAI Writer Chrome Extension Documentation</p>
+            <p>
+                <!-- You can add a link to the source code repository if available -->
+                <!-- <a href="[YOUR_REPOSITORY_LINK]" target="_blank">Source Code</a> -->
+                Generated from project README file.
+            </p>
+        </footer>
+    </body>
 </html>
