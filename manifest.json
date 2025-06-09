@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "APEXAI Writer",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "LLM powered messaging assistant for APEXAI.",
   "permissions": [
     "storage",
-    "clipboardWrite"
+    "clipboardWrite",
+    "activeTab",
+    "scripting"
   ],
   "action": {
     "default_popup": "index.html",

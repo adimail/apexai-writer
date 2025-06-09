@@ -38,6 +38,7 @@ const generateBtn = document.getElementById("generateBtn");
 const outputSectionDiv = document.getElementById("outputSection");
 const outputTextDiv = document.getElementById("outputText");
 const copyBtn = document.getElementById("copyBtn");
+const selectInputBoxBtn = document.getElementById("selectInputBoxBtn");
 
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 const settingsModelProviderSelect = document.getElementById(
@@ -88,17 +89,10 @@ async function initializeApp() {
         google: loadedSettings.apiKeys?.google || null,
       },
     };
-
-    console.log(
-      "Loaded settings from secure storage. Previous view (before reset):",
-      loadedSettings.currentView,
-    );
-  } else {
-    console.log("No settings found in secure storage, using defaults.");
   }
 
   appState.currentView = "main";
-  appState.isFocusOutputMode = false;
+  appState.isFocusOutputMode = false; // Ensure it's reset on init
 
   if (!isAiModelConfigured()) {
     appState.currentView = "settings";
@@ -108,11 +102,6 @@ async function initializeApp() {
       settingsGlobalStatusP.className = "settings-status error";
     }
   }
-
-  console.log(
-    "Initializing popup. Effective start view:",
-    appState.currentView,
-  );
 
   renderCurrentView();
   setupEventListeners();
@@ -145,12 +134,6 @@ function renderFocusMode() {
   if (appState.isFocusOutputMode) {
     mainView.classList.add("focus-output-mode");
     if (settingsBtn) settingsBtn.style.display = "none";
-    if (
-      outputTextDiv.innerHTML.trim() !== "" ||
-      outputSectionDiv.classList.contains("error")
-    ) {
-      outputSectionDiv.classList.add("show");
-    }
   } else {
     mainView.classList.remove("focus-output-mode");
     if (settingsBtn) settingsBtn.style.display = "";
@@ -205,12 +188,8 @@ async function switchToView(viewName) {
         "LLM not configured. Please complete settings to proceed.";
       settingsGlobalStatusP.className = "settings-status error";
     }
-
     appState.currentView = "settings";
-    if (appState.currentView === "settings") {
-      populateSettingsForm();
-    }
-
+    populateSettingsForm();
     renderCurrentView();
     return;
   }
@@ -245,6 +224,7 @@ function setupEventListeners() {
   });
   generateBtn.addEventListener("click", generateMessage);
   copyBtn.addEventListener("click", copyToClipboard);
+  selectInputBoxBtn.addEventListener("click", handleSelectInputBox);
 
   settingsModelProviderSelect.addEventListener(
     "change",
@@ -281,6 +261,7 @@ function setupEventListeners() {
 
       outputTextDiv.innerHTML = "";
       outputSectionDiv.classList.remove("show", "error");
+      if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
 
       await persistAppState();
       renderFocusMode();
@@ -289,7 +270,6 @@ function setupEventListeners() {
       generateBtn.innerHTML = "Generate Message";
 
       validateMainForm();
-      renderCurrentView();
     });
   }
 }
@@ -519,19 +499,21 @@ async function generateMessage() {
     return;
   }
 
+  if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
+
   appState.isFocusOutputMode = true;
   await persistAppState();
-  renderFocusMode();
 
   outputTextDiv.innerHTML = "";
   outputSectionDiv.classList.add("show");
   outputSectionDiv.classList.remove("error");
 
+  renderFocusMode();
+
   generateBtn.disabled = true;
   generateBtn.innerHTML = '<div class="spinner"></div> Generating...';
 
   let accumulatedResponse = "";
-
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
 
@@ -581,9 +563,7 @@ Instructions:
     const handleStreamChunk = (chunk) => {
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
-      if (outputSectionDiv.classList.contains("show")) {
-        outputSectionDiv.scrollTop = outputSectionDiv.scrollHeight;
-      }
+      outputTextDiv.scrollTop = outputTextDiv.scrollHeight;
     };
 
     const fullResponse = await callLlmProvider(
@@ -595,10 +575,8 @@ Instructions:
       contextualData,
       handleStreamChunk,
     );
-    displayOutput(
-      fullResponse || accumulatedResponse || "No content generated.",
-      false,
-    );
+    const llmResult = fullResponse || accumulatedResponse;
+    displayOutput(llmResult || "No content generated.", false);
   } catch (error) {
     console.error("Error generating message:", error);
     let errorMessage = `Error generating message: ${error.message}.`;
@@ -619,15 +597,27 @@ Instructions:
 }
 
 function displayOutput(content, isError = false) {
+  const placeholderText = "No content generated.";
+  const actualContent = content !== placeholderText ? content : "";
+
   outputTextDiv.innerHTML = "";
   outputTextDiv.textContent = content;
-  outputSectionDiv.classList.add("show");
+
   if (isError) {
     outputSectionDiv.classList.add("error");
+    if (selectInputBoxBtn) {
+      selectInputBoxBtn.style.display = "none";
+    }
   } else {
     outputSectionDiv.classList.remove("error");
+    if (actualContent.trim() && selectInputBoxBtn) {
+      selectInputBoxBtn.style.display = "inline-block";
+    } else if (selectInputBoxBtn) {
+      selectInputBoxBtn.style.display = "none";
+    }
   }
-  outputSectionDiv.scrollTop = 0;
+
+  outputTextDiv.scrollTop = 0;
 }
 
 async function copyToClipboard() {
@@ -644,5 +634,79 @@ async function copyToClipboard() {
     setTimeout(() => {
       copyBtn.textContent = "Copy to Clipboard";
     }, 2000);
+  }
+}
+
+async function handleSelectInputBox() {
+  const textToPaste = outputTextDiv.textContent;
+  const placeholderText = "No content generated.";
+  if (!textToPaste || textToPaste === placeholderText) {
+    console.warn("No actual text to paste for selection.");
+    return;
+  }
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab || !tab.id) {
+      console.error("Could not get active tab to select input box.");
+      alert("Error: Could not identify the active tab.");
+      return;
+    }
+
+    chrome.scripting.executeScript(
+      {
+        target: { tabId: tab.id },
+        files: ["js/content_script.js"],
+      },
+      (injectionResults) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Error injecting content_script.js:",
+            chrome.runtime.lastError.message,
+          );
+          alert(
+            `Error: Cannot interact with this page. (${chrome.runtime.lastError.message})
+This might be a protected page (e.g., Chrome Web Store, chrome:// pages).`,
+          );
+          return;
+        }
+
+        if (injectionResults && injectionResults.some((frame) => frame.error)) {
+          console.error(
+            "Error during script execution in one of the frames:",
+            injectionResults,
+          );
+        }
+
+        chrome.tabs.sendMessage(
+          tab.id,
+          {
+            action: "startSelection",
+            textToPaste: textToPaste,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "Error sending 'startSelection' message to content script or no response:",
+                chrome.runtime.lastError.message,
+              );
+            } else if (response && response.status === "selectionStarted") {
+              console.log("Content script initiated input selection mode.");
+              // window.close(); // Optionally close popup
+            } else {
+              console.log("Content script response:", response);
+            }
+          },
+        );
+      },
+    );
+  } catch (error) {
+    console.error("Error in handleSelectInputBox:", error);
+    alert(
+      `An unexpected error occurred while trying to select input box: ${error.message}`,
+    );
   }
 }

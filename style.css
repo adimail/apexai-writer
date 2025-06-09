@@ -67,13 +67,19 @@ body {
 }
 
 #mainView.focus-output-mode #outputSection {
-  display: block !important;
+  display: flex !important; /* Ensure it's flex for vertical layout */
+  flex-direction: column; /* Ensure vertical layout */
   flex-grow: 1;
   height: auto;
   min-height: 200px;
-  max-height: none;
+  max-height: none; /* Remove max-height constraint */
   margin-bottom: 15px;
   border-left-width: 3px;
+}
+
+#mainView.focus-output-mode #outputSection .output-text {
+  max-height: none; /* Allow text to fill available space in focus mode */
+  flex-grow: 1; /* Ensure text area grows */
 }
 
 #mainView.focus-output-mode #resetOutputBtn {
@@ -91,7 +97,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  margin-top: auto;
+  margin-top: auto; /* Pushes to bottom if mainView is flex container */
 }
 
 .reset-btn:hover {
@@ -246,13 +252,12 @@ textarea {
   background: #f8faff;
   border-radius: 8px;
   border-left: 3px solid #1a73b0;
-  display: none;
-  max-height: 180px;
-  overflow-y: auto;
+  display: none; /* Toggled by .show class */
+  flex-direction: column; /* Stack text and actions vertically */
 }
 
 .output-section.show {
-  display: block;
+  display: flex; /* Use flex when shown */
 }
 
 .output-text {
@@ -260,6 +265,51 @@ textarea {
   line-height: 1.5;
   color: #374151;
   white-space: pre-wrap;
+  overflow-y: auto; /* Scroll only the text if it's too long */
+  max-height: 150px; /* Adjust as needed for normal view */
+  margin-bottom: 10px; /* Space between text and buttons */
+  flex-shrink: 0; /* Prevent text area from shrinking too much */
+}
+
+.output-actions {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  gap: 8px; /* Space between buttons */
+  flex-shrink: 0; /* Prevent action bar from shrinking */
+}
+
+.copy-btn {
+  padding: 7px 14px;
+  background: #1a73b0;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+.copy-btn:hover {
+  background: #155a8a;
+}
+
+.action-btn {
+  /* Style for the "Select Input Box" button */
+  padding: 7px 14px;
+  background-color: #28a745; /* Green */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+.action-btn:hover {
+  background-color: #218838;
+}
+.action-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .spinner {
@@ -281,22 +331,6 @@ textarea {
   100% {
     transform: rotate(360deg);
   }
-}
-
-.copy-btn {
-  margin-top: 10px;
-  padding: 7px 14px;
-  background: #1a73b0;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s ease;
-  float: right;
-}
-.copy-btn:hover {
-  background: #155a8a;
 }
 
 .output-section.error {
