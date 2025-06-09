@@ -1,8 +1,4 @@
-import {
-  modelConfigs,
-  companyInfo,
-  getSituationTemplates,
-} from "./config.js";
+import { modelConfigs, companyInfo, getSituationTemplates } from "./config.js";
 import { renderContextualInputs, getContextualFormData } from "./ui.js";
 import { callLlmProvider } from "./llm.js";
 import {
@@ -24,6 +20,9 @@ let appState = {
   numMessagesForSequence: 2,
   generateButtonBaseText: "Generate Email",
   rawLastLlmResponse: "",
+  selectedSituation: null,
+  lastRecipientName: "",
+  lastRecipientCompany: "",
 };
 
 const mainView = document.getElementById("mainView");
@@ -98,6 +97,9 @@ async function initializeApp() {
       },
       outputType: loadedSettings.outputType || "email",
       numMessagesForSequence: loadedSettings.numMessagesForSequence || 2,
+      selectedSituation: loadedSettings.selectedSituation || null,
+      lastRecipientName: loadedSettings.lastRecipientName || "",
+      lastRecipientCompany: loadedSettings.lastRecipientCompany || "",
     };
   }
   appState.generateButtonBaseText =
@@ -120,6 +122,23 @@ async function initializeApp() {
   numMessagesSelect.value = appState.numMessagesForSequence.toString();
   updateOutputTypeUI();
 
+  // If a situation was previously selected, activate its button and render inputs
+  if (appState.selectedSituation) {
+    const activeBtn = document.querySelector(
+      `.situation-btn[data-situation="${appState.selectedSituation}"]`,
+    );
+    if (activeBtn) {
+      activeBtn.classList.add("active");
+    }
+    renderContextualInputs(
+      appState.selectedSituation,
+      contextualInputsContainer,
+      appState.lastRecipientName,
+      appState.lastRecipientCompany,
+    );
+    setupContextualInputListeners(); 
+  }
+
   renderCurrentView();
   setupEventListeners();
   updateCurrentModelDisplay();
@@ -137,6 +156,9 @@ async function persistAppState() {
     isFocusOutputMode: appState.isFocusOutputMode,
     outputType: appState.outputType,
     numMessagesForSequence: appState.numMessagesForSequence,
+    selectedSituation: appState.selectedSituation,
+    lastRecipientName: appState.lastRecipientName,
+    lastRecipientCompany: appState.lastRecipientCompany,
   };
 
   try {
@@ -239,6 +261,28 @@ function updateOutputTypeUI() {
   validateMainForm();
 }
 
+// Function to set up listeners for contextual inputs (recipient name/company)
+function setupContextualInputListeners() {
+  const recipientNameInput = document.getElementById("contextualRecipientName");
+  const recipientCompanyInput = document.getElementById(
+    "contextualRecipientCompany",
+  );
+
+  if (recipientNameInput) {
+    recipientNameInput.addEventListener("input", async (e) => {
+      appState.lastRecipientName = e.target.value;
+      await persistAppState();
+    });
+  }
+
+  if (recipientCompanyInput) {
+    recipientCompanyInput.addEventListener("input", async (e) => {
+      appState.lastRecipientCompany = e.target.value;
+      await persistAppState();
+    });
+  }
+}
+
 function setupEventListeners() {
   settingsBtn.addEventListener("click", async () => {
     if (appState.isFocusOutputMode) return;
@@ -266,14 +310,19 @@ function setupEventListeners() {
   });
 
   situationBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
+      // Made async
       situationBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       appState.selectedSituation = btn.dataset.situation;
       renderContextualInputs(
         appState.selectedSituation,
         contextualInputsContainer,
+        appState.lastRecipientName, // Pass stored values
+        appState.lastRecipientCompany,
       );
+      setupContextualInputListeners(); // Re-attach listeners
+      await persistAppState(); // Persist selectedSituation
       validateMainForm();
     });
   });
@@ -318,6 +367,20 @@ function setupEventListeners() {
       outputTextDiv.innerHTML = "";
       outputSectionDiv.classList.remove("show", "error");
       if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
+
+      // Optionally clear recipient fields on full reset, or keep them.
+      // For now, let's keep them as they are general context.
+      // appState.lastRecipientName = "";
+      // appState.lastRecipientCompany = "";
+      // if (appState.selectedSituation) {
+      //   renderContextualInputs(
+      //     appState.selectedSituation,
+      //     contextualInputsContainer,
+      //     appState.lastRecipientName,
+      //     appState.lastRecipientCompany
+      //   );
+      //   setupContextualInputListeners();
+      // }
 
       await persistAppState();
       renderFocusMode();
@@ -659,13 +722,9 @@ Instructions for Message Sequence:
       );
     }
 
+    outputTextDiv.textContent = ""; // Clear for streaming
     const handleStreamChunk = (chunk) => {
-      // For message sequences, we want to build up the raw response first
-      // and parse/display it once complete, or update display more carefully.
-      // For now, let's just append to outputTextDiv for live feedback,
-      // and the final parsing will happen on fullResponse.
-      // This might look a bit messy during streaming for sequences, but good for now.
-      outputTextDiv.textContent += chunk;
+      outputTextDiv.textContent += chunk; // Show raw stream
       accumulatedResponse += chunk;
       outputTextDiv.scrollTop = outputTextDiv.scrollHeight;
     };
@@ -679,7 +738,8 @@ Instructions for Message Sequence:
       contextualData,
       handleStreamChunk,
     );
-    appState.rawLastLlmResponse = fullResponse || accumulatedResponse; // Store the final raw response
+    appState.rawLastLlmResponse = fullResponse || accumulatedResponse;
+
     displayOutput(
       appState.rawLastLlmResponse || "No content generated.",
       false,
@@ -707,9 +767,8 @@ Instructions for Message Sequence:
 function displayOutput(rawContent, isError = false, outputType = "email") {
   const placeholderText = "No content generated.";
   const actualContent = rawContent !== placeholderText ? rawContent : "";
-  appState.rawLastLlmResponse = actualContent; // Update with potentially cleaned content
 
-  outputTextDiv.innerHTML = ""; // Clear previous content
+  outputTextDiv.innerHTML = "";
 
   if (isError) {
     outputSectionDiv.classList.add("error");
@@ -720,18 +779,22 @@ function displayOutput(rawContent, isError = false, outputType = "email") {
   } else {
     outputSectionDiv.classList.remove("error");
     if (outputType === "message_sequence" && actualContent) {
-      const parts = actualContent.split(/\n---\n/); // Split by the "---" separator line
-      parts.forEach((part, index) => {
+      const parts = actualContent.split(/\n---\n/);
+      const messageContents = parts
+        .map((part) => part.replace(/^MESSAGE \d+:\s*\n?/i, "").trim())
+        .filter((content) => content.length > 0);
+
+      messageContents.forEach((content, index) => {
         const messageDiv = document.createElement("div");
         messageDiv.className = "individual-message-block";
 
         const contentPre = document.createElement("pre");
-        contentPre.textContent = part.trim(); // Trim each part
+        contentPre.textContent = content;
         messageDiv.appendChild(contentPre);
 
         outputTextDiv.appendChild(messageDiv);
 
-        if (index < parts.length - 1) {
+        if (index < messageContents.length - 1) {
           const hr = document.createElement("hr");
           hr.className = "message-visual-separator";
           outputTextDiv.appendChild(hr);
@@ -752,8 +815,18 @@ function displayOutput(rawContent, isError = false, outputType = "email") {
 }
 
 async function copyToClipboard() {
-  const textToCopy = appState.rawLastLlmResponse; // Use the stored raw response
+  let textToCopy = appState.rawLastLlmResponse;
+
+  if (appState.outputType === "message_sequence" && textToCopy) {
+    const parts = textToCopy.split(/\n---\n/);
+    const cleanedMessages = parts
+      .map((part) => part.replace(/^MESSAGE \d+:\s*\n?/i, "").trim())
+      .filter((content) => content.length > 0);
+    textToCopy = cleanedMessages.join("\n\n");
+  }
+
   if (!textToCopy) return;
+
   try {
     await navigator.clipboard.writeText(textToCopy);
     copyBtn.textContent = "Copied!";
@@ -770,8 +843,21 @@ async function copyToClipboard() {
 }
 
 async function handleSelectInputBox() {
-  const textToPaste = appState.rawLastLlmResponse; // Use the stored raw response
+  let textToPaste = appState.rawLastLlmResponse;
   const placeholderText = "No content generated.";
+
+  if (
+    appState.outputType === "message_sequence" &&
+    textToPaste &&
+    textToPaste !== placeholderText
+  ) {
+    const parts = textToPaste.split(/\n---\n/);
+    const cleanedMessages = parts
+      .map((part) => part.replace(/^MESSAGE \d+:\s*\n?/i, "").trim())
+      .filter((content) => content.length > 0);
+    textToPaste = cleanedMessages.join("\n\n");
+  }
+
   if (!textToPaste || textToPaste === placeholderText) {
     console.warn("No actual text to paste for selection.");
     return;
@@ -827,7 +913,6 @@ This might be a protected page (e.g., Chrome Web Store, chrome:// pages).`,
               );
             } else if (response && response.status === "selectionStarted") {
               console.log("Content script initiated input selection mode.");
-              // window.close(); // Optionally close popup
             } else {
               console.log("Content script response:", response);
             }
