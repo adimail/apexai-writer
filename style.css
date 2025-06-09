@@ -1,0 +1,409 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 420px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #333;
+  background-color: #f4f7f6;
+}
+
+.container {
+  background: white;
+  padding: 20px;
+  min-height: 500px; /* Adjusted min-height for potentially more content */
+  max-height: 600px; /* Max height for popup */
+  overflow-y: auto; /* Allow scrolling if content exceeds max-height */
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1a73b0; /* APEXAI Blue */
+}
+
+.settings-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #555;
+  padding: 5px;
+}
+.settings-btn:hover {
+  color: #1a73b0;
+}
+
+.current-model-display {
+  font-size: 12px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 15px;
+  padding: 8px;
+  background-color: #eef2f7;
+  border-radius: 6px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+select,
+textarea,
+input[type="password"],
+input[type="text"],
+input[type="date"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  background-color: #fff;
+}
+
+select:focus,
+textarea:focus,
+input[type="password"]:focus,
+input[type="text"]:focus,
+input[type="date"]:focus {
+  outline: none;
+  border-color: #667eea; /* A nice focus blue */
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px; /* Slightly reduced default height */
+}
+
+.situation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.situation-btn {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  color: #374151;
+}
+
+.situation-btn:hover {
+  border-color: #a5b4fc;
+  background: #f0f2fe;
+}
+
+.situation-btn.active {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
+}
+
+/* Styles for Contextual Inputs Area */
+#contextualInputsContainer {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 15px;
+  margin-top: 20px;
+}
+
+#contextualInputsContainer .contextual-inputs-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a73b0; /* APEXAI Blue */
+  margin-bottom: 12px;
+}
+
+#contextualInputsContainer .form-group {
+  margin-bottom: 12px;
+}
+
+#contextualInputsContainer label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#contextualInputsContainer input[type="text"],
+#contextualInputsContainer input[type="date"],
+#contextualInputsContainer select,
+#contextualInputsContainer textarea {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+#contextualInputsContainer textarea {
+  min-height: 60px;
+}
+
+.generate-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(
+    135deg,
+    #1a73b0 0%,
+    #258cd1 100%
+  ); /* APEXAI Gradient */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(26, 115, 176, 0.25);
+}
+
+.generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.output-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8faff;
+  border-radius: 8px;
+  border-left: 3px solid #1a73b0; /* APEXAI Blue */
+  display: none;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.output-section.show {
+  display: block;
+}
+
+.output-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.copy-btn {
+  margin-top: 10px;
+  padding: 7px 14px;
+  background: #1a73b0; /* APEXAI Blue */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  float: right;
+}
+.copy-btn:hover {
+  background: #155a8a; /* Darker APEXAI Blue */
+}
+
+.output-section.error {
+  /* Ensure error class takes precedence for background/border */
+  background: #fee2e2;
+  border-left-color: #ef4444;
+}
+.output-section.error .output-text {
+  /* Text color for error message */
+  color: #b91c1c;
+}
+
+#settingsView {
+  padding-top: 10px;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+.settings-header h2 {
+  font-size: 20px;
+  color: #1a73b0; /* APEXAI Blue */
+}
+
+.close-settings-btn {
+  background-color: #1a73b0; /* APEXAI Blue */
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+.close-settings-btn:hover {
+  background-color: #155a8a; /* Darker APEXAI Blue */
+}
+
+.settings-section {
+  margin-bottom: 25px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fdfdfd;
+}
+.settings-section h3 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.api-key-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e0e0e0;
+}
+.api-key-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.api-key-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.save-key-btn,
+.clear-key-btn {
+  flex-grow: 1;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.save-key-btn {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+.save-key-btn:hover {
+  background-color: #218838;
+}
+
+.clear-key-btn {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+.clear-key-btn:hover {
+  background-color: #c82333;
+}
+
+.api-key-status,
+.settings-status {
+  font-size: 12px;
+  margin-top: 8px;
+}
+.api-key-status.success,
+.settings-status.success {
+  color: #28a745;
+}
+.api-key-status.error,
+.settings-status.error {
+  color: #dc3545;
+}
+
+/* Removed companyContextFields styles as it's no longer used */
+
+.save-settings-btn {
+  /* This class was for company context, might be reused or removed */
+  width: auto;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+  display: block;
+}
+.save-settings-btn:hover {
+  background-color: #0069d9;
+}
+
+.settings-description {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 10px; /* Adjusted margin */
+  line-height: 1.4;
+}
+.settings-description li {
+  margin-bottom: 5px;
+}
+
+.settings-note {
+  font-size: 11px;
+  color: #777;
+  text-align: center;
+  margin-top: 20px;
+}
+
+#settingsGlobalStatus {
+  padding: 5px 0;
+}

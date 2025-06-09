@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APEXAI Writer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">APEXAI Writer</div>
+        <button id="settingsBtn" class="settings-btn" title="Settings">
+          ⚙️
+        </button>
+      </div>
+
+      <!-- Main View -->
+      <div id="mainView">
+        <div class="current-model-display" id="currentModelDisplay">
+          Configure LLM in Settings
+        </div>
+        <!-- User Prompt -->
+        <div class="form-group">
+          <label>Your Core Message Context</label>
+          <textarea
+            id="userPrompt"
+            placeholder="Describe the main points you want to communicate..."
+          ></textarea>
+        </div>
+
+        <!-- Situation Selection -->
+        <div class="form-group">
+          <label>Message Type</label>
+          <div class="situation-grid">
+            <button class="situation-btn" data-situation="cold-email">
+              📧 Cold Email
+            </button>
+            <button class="situation-btn" data-situation="followup">
+              🔄 Follow-up
+            </button>
+            <button class="situation-btn" data-situation="pitch-agency">
+              🎯 Agency Pitch
+            </button>
+            <button class="situation-btn" data-situation="proposal">
+              📋 Proposal
+            </button>
+            <button class="situation-btn" data-situation="meeting-request">
+              🗓️ Meeting Request
+            </button>
+            <button class="situation-btn" data-situation="thank-you">
+              🙏 Thank You
+            </button>
+          </div>
+        </div>
+
+        <!-- Contextual Inputs Container -->
+        <div
+          id="contextualInputsContainer"
+          class="form-group"
+          style="margin-top: 15px"
+        >
+          <!-- Dynamic inputs will be rendered here by js/ui.js -->
+        </div>
+
+        <button class="generate-btn" id="generateBtn" disabled>
+          Generate Message
+        </button>
+
+        <!-- Output Section -->
+        <div class="output-section" id="outputSection">
+          <div class="output-text" id="outputText"></div>
+          <button class="copy-btn" id="copyBtn">Copy to Clipboard</button>
+        </div>
+      </div>
+
+      <!-- Settings View (initially hidden) -->
+      <div id="settingsView" style="display: none">
+        <div class="settings-header">
+          <h2>Settings</h2>
+          <button id="closeSettingsBtn" class="close-settings-btn">Done</button>
+        </div>
+
+        <p
+          id="settingsGlobalStatus"
+          class="settings-status"
+          style="text-align: center; margin-bottom: 10px"
+        ></p>
+
+        <div class="settings-section">
+          <h3>LLM Configuration</h3>
+          <div class="form-group">
+            <label for="settingsModelProvider">Model Provider</label>
+            <select id="settingsModelProvider">
+              <option value="">Select LLM Provider</option>
+              <option value="openai">OpenAI (GPT)</option>
+              <option value="google">Google (Gemini)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="settingsModelVersion">Model Version</label>
+            <select id="settingsModelVersion" disabled>
+              <option value="">Choose model version</option>
+            </select>
+          </div>
+
+          <div
+            id="settingsApiKeySectionOpenAI"
+            class="api-key-group"
+            style="display: none"
+          >
+            <div class="form-group">
+              <label for="settingsApiKeyOpenAI">OpenAI API Key</label>
+              <input
+                type="password"
+                id="settingsApiKeyOpenAI"
+                placeholder="Enter OpenAI API Key"
+              />
+              <div class="api-key-actions">
+                <button class="save-key-btn" data-provider="openai">
+                  Save Key
+                </button>
+                <button class="clear-key-btn" data-provider="openai">
+                  Clear Key
+                </button>
+              </div>
+              <p class="api-key-status" id="apiKeyStatusOpenAI"></p>
+            </div>
+          </div>
+          <div
+            id="settingsApiKeySectionGoogle"
+            class="api-key-group"
+            style="display: none"
+          >
+            <div class="form-group">
+              <label for="settingsApiKeyGoogle">Google API Key</label>
+              <input
+                type="password"
+                id="settingsApiKeyGoogle"
+                placeholder="Enter Google API Key"
+              />
+              <div class="api-key-actions">
+                <button class="save-key-btn" data-provider="google">
+                  Save Key
+                </button>
+                <button class="clear-key-btn" data-provider="google">
+                  Clear Key
+                </button>
+              </div>
+              <p class="api-key-status" id="apiKeyStatusGoogle"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>About APEXAI Writer</h3>
+          <p class="settings-description">
+            This extension helps you craft messages using LLM, tailored with
+            APEXAI's company information. Our company details are fixed and
+            automatically used by the LLM:
+          </p>
+          <ul
+            id="fixedCompanyInfoList"
+            class="settings-description"
+            style="list-style-position: inside; padding-left: 10px"
+          >
+            <!-- Fixed info will be populated by JS -->
+          </ul>
+        </div>
+
+        <p class="settings-note">
+          LLM settings and API keys are saved locally in your browser's
+          extension storage securely.
+        </p>
+      </div>
+    </div>
+    <script type="module" src="js/popup.js"></script>
+  </body>
+</html>

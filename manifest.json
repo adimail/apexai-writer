@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "APEXAI Writer",
+  "version": "1.2.0",
+  "description": "LLM powered messaging assistant for APEXAI.",
+  "permissions": [
+    "storage",
+    "clipboardWrite"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png",
+      "512": "icons/icon512.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png",
+    "512": "icons/icon512.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
