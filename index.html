@@ -30,6 +30,31 @@
             ></textarea>
           </div>
 
+          <!-- Preferred Message Length -->
+          <div class="form-group">
+            <label for="settingsMessageLength"
+              >Preferred Message Length:
+              <output id="messageLengthOutput" for="settingsMessageLength"
+                >Medium</output
+              ></label
+            >
+            <input
+              type="range"
+              id="settingsMessageLength"
+              min="0"
+              max="3"
+              value="2"
+              step="1"
+              list="messageLengthTicks"
+            />
+            <datalist id="messageLengthTicks">
+              <option value="0" label="Very Short"></option>
+              <option value="1" label="Short"></option>
+              <option value="2" label="Medium"></option>
+              <option value="3" label="Long"></option>
+            </datalist>
+          </div>
+
           <!-- Output Type Selection -->
           <div class="form-group">
             <label>I want to write an...</label>
@@ -145,9 +170,14 @@
             </button>
           </div>
         </div>
-        <button id="resetOutputBtn" class="reset-btn" style="display: none">
-          Reset View
-        </button>
+
+        <!-- Buttons for focus mode -->
+        <div id="focusModeActionsContainer" style="display: none">
+          <button id="reviseInputsBtn" class="revise-btn">
+            ✏️ Revise Inputs
+          </button>
+          <button id="resetOutputBtn" class="reset-btn">🔄 Reset</button>
+        </div>
       </div>
 
       <!-- Settings View (initially hidden) -->
@@ -246,41 +276,6 @@
             This name will be used to indicate who is writing the message from
             APEXAI.
           </p>
-        </div>
-
-        <!-- General Settings Section -->
-        <div class="settings-section">
-          <h3>General Settings</h3>
-          <div class="form-group">
-            <label for="settingsMessageLength"
-              >Preferred Message Length:
-              <output id="messageLengthOutput" for="settingsMessageLength"
-                >Medium</output
-              ></label
-            >
-            <input
-              type="range"
-              id="settingsMessageLength"
-              min="0"
-              max="3"
-              value="2"
-              step="1"
-              list="messageLengthTicks"
-            />
-            <datalist id="messageLengthTicks">
-              <option value="0" label="Very Short"></option>
-              <option value="1" label="Short"></option>
-              <option value="2" label="Medium"></option>
-              <option value="3" label="Long"></option>
-            </datalist>
-            <p
-              class="settings-description"
-              style="font-size: 11px; margin-top: 5px"
-            >
-              Adjust the desired length of generated content. "Long" is still
-              professionally concise.
-            </p>
-          </div>
         </div>
 
         <div class="settings-section">

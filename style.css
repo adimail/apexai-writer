@@ -121,6 +121,11 @@ body {
   border-radius: 3px;
 }
 
+#inputControlsContainer {
+  display: flex;
+  flex-direction: column;
+}
+
 #settingsView {
   display: none;
 }
@@ -259,16 +264,15 @@ textarea {
   min-height: 50px;
 }
 
-/* Radio Button Styling */
 .radio-group {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Default to 2 columns */
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 4px;
 }
 
 .radio-group-horizontal-3col {
-  grid-template-columns: repeat(3, 1fr); /* Specific 3-column layout */
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .radio-option {
@@ -315,10 +319,7 @@ textarea {
   color: var(--primary-color);
 }
 
-/* Contextual radio buttons specific styling */
 #contextualInputsContainer .radio-group {
-  /* Inherits global .radio-group styles, including grid layout */
-  /* If contextual radios also need to be 3-col, add .radio-group-horizontal-3col class to them in ui.js */
 }
 #contextualInputsContainer .radio-option {
   padding: 6px 10px;
@@ -621,48 +622,61 @@ textarea {
 }
 
 #mainView.focus-output-mode {
-  padding: 16px 20px 10px;
-}
-#mainView.focus-output-mode #inputControlsContainer {
-  display: none;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
-#mainView.focus-output-mode #outputSection {
-  display: flex !important;
-  flex-direction: column;
+#mainView.focus-output-mode .output-section {
   flex-grow: 1;
   height: auto;
   min-height: 0;
   max-height: none;
   margin-top: 0;
   margin-bottom: 10px;
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--primary-color);
 }
 
-#mainView.focus-output-mode #outputSection .output-text {
+#mainView.focus-output-mode .output-text {
   max-height: none;
   flex-grow: 1;
 }
 
-#mainView.focus-output-mode #resetOutputBtn {
-  display: block;
+#focusModeActionsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
   flex-shrink: 0;
 }
 
+.revise-btn,
 .reset-btn {
   width: 100%;
   padding: 10px;
-  background-color: var(--secondary-color);
-  color: var(--content-bg);
   border: none;
   border-radius: var(--border-radius-md);
   font-size: var(--base-font-size);
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
+.revise-btn {
+  background-color: var(--primary-color);
+  color: var(--content-bg);
+}
+.revise-btn:hover {
+  background-color: var(--primary-color-darker);
+}
+
+.reset-btn {
+  background-color: var(--secondary-color);
+  color: var(--content-bg);
+}
 .reset-btn:hover {
   background-color: var(--secondary-color-darker);
 }

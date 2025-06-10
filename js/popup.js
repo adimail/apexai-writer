@@ -52,6 +52,13 @@ let appState = {
 
 const mainView = document.getElementById("mainView");
 const settingsView = document.getElementById("settingsView");
+const inputControlsContainer = document.getElementById(
+  "inputControlsContainer",
+);
+const focusModeActionsContainer = document.getElementById(
+  "focusModeActionsContainer",
+);
+const reviseInputsBtn = document.getElementById("reviseInputsBtn");
 const resetOutputBtn = document.getElementById("resetOutputBtn");
 
 const settingsBtn = document.getElementById("settingsBtn");
@@ -98,6 +105,7 @@ const apiKeyStatusGoogle = document.getElementById("apiKeyStatusGoogle");
 const fixedCompanyInfoList = document.getElementById("fixedCompanyInfoList");
 const settingsGlobalStatusP = document.getElementById("settingsGlobalStatus");
 const settingsUserNameInput = document.getElementById("settingsUserName");
+
 const settingsMessageLengthSlider = document.getElementById(
   "settingsMessageLength",
 );
@@ -162,7 +170,6 @@ async function initializeApp() {
     appState.outputType = "email";
   }
 
-  // Initialize numMessagesRadioGroup
   const currentNumMessagesRadio = numMessagesRadioGroup.querySelector(
     `input[name="numMessages"][value="${appState.numMessagesForSequence}"]`,
   );
@@ -170,7 +177,7 @@ async function initializeApp() {
     currentNumMessagesRadio.checked = true;
   } else {
     const defaultNumRadio = numMessagesRadioGroup.querySelector(
-      'input[name="numMessages"][value="2"]', // Default to 2 messages
+      'input[name="numMessages"][value="2"]',
     );
     if (defaultNumRadio) defaultNumRadio.checked = true;
     appState.numMessagesForSequence = 2;
@@ -237,15 +244,25 @@ async function persistAppState() {
 function renderFocusMode() {
   if (appState.isFocusOutputMode) {
     mainView.classList.add("focus-output-mode");
+    if (inputControlsContainer) inputControlsContainer.style.display = "none";
+    outputSectionDiv.classList.add("show");
+    if (focusModeActionsContainer)
+      focusModeActionsContainer.style.display = "flex";
     if (settingsBtn) settingsBtn.style.display = "none";
   } else {
     mainView.classList.remove("focus-output-mode");
+    if (inputControlsContainer) inputControlsContainer.style.display = "flex";
+    if (focusModeActionsContainer)
+      focusModeActionsContainer.style.display = "none";
     if (settingsBtn) settingsBtn.style.display = "";
+
     if (
-      outputTextDiv.textContent.trim() === "" &&
+      outputTextDiv.innerHTML.trim() === "" &&
       !outputSectionDiv.classList.contains("error")
     ) {
       outputSectionDiv.classList.remove("show");
+    } else {
+      outputSectionDiv.classList.add("show");
     }
   }
 }
@@ -272,6 +289,8 @@ function renderCurrentView() {
       settingsBtn.textContent = "⚙️";
     } else if (appState.currentView === "settings") {
       settingsBtn.textContent = "";
+    } else if (appState.isFocusOutputMode) {
+      settingsBtn.style.display = "none";
     }
   }
 }
@@ -310,7 +329,6 @@ function updateOutputTypeUI() {
     numMessagesGroup.style.display = "none";
     appState.generateButtonBaseText = "Generate Email";
   } else {
-    // message_sequence
     situationLabel.textContent = "Message Sequence Context";
     numMessagesGroup.style.display = "block";
     appState.generateButtonBaseText = "Generate Messages";
@@ -370,13 +388,11 @@ function setupEventListeners() {
   outputTypeRadioGroup.addEventListener("change", async (e) => {
     if (e.target.type === "radio" && e.target.name === "outputType") {
       appState.outputType = e.target.value;
-      // numMessagesForSequence is now handled by its own radio group listener
       updateOutputTypeUI();
       await persistAppState();
     }
   });
 
-  // Event listener for numMessagesRadioGroup
   numMessagesRadioGroup.addEventListener("change", async (e) => {
     if (e.target.type === "radio" && e.target.name === "numMessages") {
       appState.numMessagesForSequence = parseInt(e.target.value, 10);
@@ -443,6 +459,18 @@ function setupEventListeners() {
     });
   }
 
+  if (reviseInputsBtn) {
+    reviseInputsBtn.addEventListener("click", async () => {
+      appState.isFocusOutputMode = false;
+
+      await persistAppState();
+      renderFocusMode();
+
+      generateBtn.innerHTML = appState.generateButtonBaseText;
+      validateMainForm();
+    });
+  }
+
   if (resetOutputBtn) {
     resetOutputBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
@@ -455,9 +483,7 @@ function setupEventListeners() {
       await persistAppState();
       renderFocusMode();
 
-      generateBtn.disabled = false;
       generateBtn.innerHTML = appState.generateButtonBaseText;
-
       validateMainForm();
     });
   }
@@ -518,13 +544,6 @@ function populateSettingsForm() {
 
   if (settingsUserNameInput) {
     settingsUserNameInput.value = appState.userName || "";
-  }
-
-  if (settingsMessageLengthSlider && messageLengthOutput) {
-    settingsMessageLengthSlider.value = appState.preferredMessageLength;
-    messageLengthOutput.textContent =
-      MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]?.label ||
-      "Medium";
   }
 }
 
@@ -715,7 +734,6 @@ async function generateMessage() {
   if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
 
   appState.isFocusOutputMode = true;
-  await persistAppState();
 
   outputTextDiv.innerHTML = "";
   outputSectionDiv.classList.add("show");
@@ -852,7 +870,6 @@ Instructions for Message Sequence:
       );
     }
 
-    outputTextDiv.textContent = "";
     const handleStreamChunk = (chunk) => {
       outputTextDiv.textContent += chunk;
       accumulatedResponse += chunk;
@@ -887,7 +904,9 @@ Instructions for Message Sequence:
       errorMessage += " Check console for details.";
     }
     displayOutput(errorMessage, true, appState.outputType);
+    appState.rawLastLlmResponse = errorMessage;
   } finally {
+    await persistAppState();
     generateBtn.disabled = false;
     generateBtn.innerHTML = appState.generateButtonBaseText;
     validateMainForm();
@@ -1043,7 +1062,10 @@ This might be a protected page (e.g., Chrome Web Store, chrome:// pages).`,
             } else if (response && response.status === "selectionStarted") {
               console.log("Content script initiated input selection mode.");
             } else {
-              console.log("Content script response:", response);
+              console.log(
+                "Content script response (or no response):",
+                response,
+              );
             }
           },
         );
