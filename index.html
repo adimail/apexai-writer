@@ -21,127 +21,146 @@
           <div class="current-model-display" id="currentModelDisplay">
             Configure LLM in Settings
           </div>
-          <!-- User Prompt -->
-          <div class="form-group">
-            <label>Your Core Message Context</label>
-            <textarea
-              id="userPrompt"
-              placeholder="Describe the main points you want to communicate..."
-            ></textarea>
-          </div>
 
-          <!-- Preferred Message Length -->
-          <div class="form-group">
-            <label for="settingsMessageLength"
-              >Preferred Message Length:
-              <output id="messageLengthOutput" for="settingsMessageLength"
-                >Medium</output
-              ></label
-            >
-            <input
-              type="range"
-              id="settingsMessageLength"
-              min="0"
-              max="3"
-              value="2"
-              step="1"
-              list="messageLengthTicks"
-            />
-            <datalist id="messageLengthTicks">
-              <option value="0" label="Very Short"></option>
-              <option value="1" label="Short"></option>
-              <option value="2" label="Medium"></option>
-              <option value="3" label="Long"></option>
-            </datalist>
-          </div>
+          <details class="input-group-details" open>
+            <summary class="input-group-summary">Core Message & Format</summary>
+            <div class="details-content">
+              <!-- User Prompt -->
+              <div class="form-group">
+                <label>Your Core Message Context</label>
+                <textarea
+                  id="userPrompt"
+                  placeholder="Describe the main points you want to communicate..."
+                ></textarea>
+              </div>
 
-          <!-- Output Type Selection -->
-          <div class="form-group">
-            <label>I want to write an...</label>
-            <div class="radio-group" id="outputTypeRadioGroup">
-              <div class="radio-option">
+              <!-- Preferred Message Length -->
+              <div class="form-group">
+                <label for="settingsMessageLength"
+                  >Preferred Message Length:
+                  <output id="messageLengthOutput" for="settingsMessageLength"
+                    >Medium</output
+                  ></label
+                >
                 <input
-                  type="radio"
-                  id="outputTypeEmail"
-                  name="outputType"
-                  value="email"
-                />
-                <label for="outputTypeEmail">Email</label>
-              </div>
-              <div class="radio-option">
-                <input
-                  type="radio"
-                  id="outputTypeMessageSequence"
-                  name="outputType"
-                  value="message_sequence"
-                />
-                <label for="outputTypeMessageSequence">Messages</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Number of Messages (conditional) -->
-          <div class="form-group" id="numMessagesGroup" style="display: none">
-            <label>Number of Messages in Sequence</label>
-            <div
-              class="radio-group radio-group-horizontal-3col"
-              id="numMessagesRadioGroup"
-            >
-              <div class="radio-option">
-                <input
-                  type="radio"
-                  id="numMessages1"
-                  name="numMessages"
-                  value="1"
-                />
-                <label for="numMessages1">1</label>
-              </div>
-              <div class="radio-option">
-                <input
-                  type="radio"
-                  id="numMessages2"
-                  name="numMessages"
+                  type="range"
+                  id="settingsMessageLength"
+                  min="0"
+                  max="3"
                   value="2"
+                  step="1"
+                  list="messageLengthTicks"
                 />
-                <label for="numMessages2">2</label>
+                <datalist id="messageLengthTicks">
+                  <option value="0" label="Very Short"></option>
+                  <option value="1" label="Short"></option>
+                  <option value="2" label="Medium"></option>
+                  <option value="3" label="Long"></option>
+                </datalist>
               </div>
-              <div class="radio-option">
-                <input
-                  type="radio"
-                  id="numMessages3"
-                  name="numMessages"
-                  value="3"
-                />
-                <label for="numMessages3">3</label>
+
+              <!-- Output Type Selection -->
+              <div class="form-group">
+                <label>I want to write an...</label>
+                <div class="radio-group" id="outputTypeRadioGroup">
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="outputTypeEmail"
+                      name="outputType"
+                      value="email"
+                    />
+                    <label for="outputTypeEmail">Email</label>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="outputTypeMessageSequence"
+                      name="outputType"
+                      value="message_sequence"
+                    />
+                    <label for="outputTypeMessageSequence">Messages</label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Number of Messages (conditional) -->
+              <div
+                class="form-group"
+                id="numMessagesGroup"
+                style="display: none"
+              >
+                <label>Number of Messages in Sequence</label>
+                <div
+                  class="radio-group radio-group-horizontal-3col"
+                  id="numMessagesRadioGroup"
+                >
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="numMessages1"
+                      name="numMessages"
+                      value="1"
+                    />
+                    <label for="numMessages1">1</label>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="numMessages2"
+                      name="numMessages"
+                      value="2"
+                    />
+                    <label for="numMessages2">2</label>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="numMessages3"
+                      name="numMessages"
+                      value="3"
+                    />
+                    <label for="numMessages3">3</label>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
-          <!-- Situation Selection -->
-          <div class="form-group" id="situationSelectionGroup">
-            <label id="situationLabel">Email Type</label>
-            <div class="situation-grid">
-              <button class="situation-btn" data-situation="cold-email">
-                📧 Cold Email
-              </button>
-              <button class="situation-btn" data-situation="followup">
-                🔄 Follow-up
-              </button>
-              <button class="situation-btn" data-situation="pitch-agency">
-                🎯 Agency Pitch
-              </button>
-              <button class="situation-btn" data-situation="proposal">
-                📋 Proposal
-              </button>
-              <button class="situation-btn" data-situation="meeting-request">
-                🗓️ Meeting Request
-              </button>
-              <button class="situation-btn" data-situation="thank-you">
-                🙏 Thank You
-              </button>
+          <details class="input-group-details">
+            <summary class="input-group-summary">
+              Message Type & Context
+            </summary>
+            <div class="details-content">
+              <!-- Situation Selection -->
+              <div class="form-group" id="situationSelectionGroup">
+                <label id="situationLabel">Email Type</label>
+                <div class="situation-grid">
+                  <button class="situation-btn" data-situation="cold-email">
+                    📧 Cold Email
+                  </button>
+                  <button class="situation-btn" data-situation="followup">
+                    🔄 Follow-up
+                  </button>
+                  <button class="situation-btn" data-situation="pitch-agency">
+                    🎯 Agency Pitch
+                  </button>
+                  <button class="situation-btn" data-situation="proposal">
+                    📋 Proposal
+                  </button>
+                  <button
+                    class="situation-btn"
+                    data-situation="meeting-request"
+                  >
+                    🗓️ Meeting Request
+                  </button>
+                  <button class="situation-btn" data-situation="thank-you">
+                    🙏 Thank You
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-
+          </details>
           <!-- Contextual Inputs Container -->
           <div
             id="contextualInputsContainer"

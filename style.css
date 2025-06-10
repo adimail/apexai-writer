@@ -200,6 +200,60 @@ textarea {
   min-height: 70px;
 }
 
+.input-group-details {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  margin-bottom: 16px;
+  background-color: var(--content-bg);
+}
+
+.input-group-details:last-of-type {
+}
+
+.input-group-summary {
+  padding: 10px 12px;
+  font-weight: 500;
+  color: var(--text-dark);
+  background-color: var(--light-gray-bg);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.input-group-summary:hover {
+  background-color: #e9ecef;
+}
+
+.input-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.input-group-summary::before {
+  content: "▶";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  font-size: 10px;
+  color: var(--text-medium);
+  transition: transform 0.2s ease-in-out;
+}
+
+.input-group-details[open] > .input-group-summary::before {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.details-content {
+  padding: 16px 12px 0;
+}
+
+.details-content .form-group:last-child {
+  margin-bottom: 16px;
+}
+
 .situation-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -642,7 +696,6 @@ textarea {
 
 #focusModeActionsContainer {
   display: flex;
-  flex-direction: column;
   gap: 10px;
   margin-top: 10px;
   width: 100%;

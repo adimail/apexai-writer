@@ -790,6 +790,12 @@ Instructions:
 5.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
 6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
 7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
+8.  **Output Format**: The entire email body must be plain text. Do not use any Markdown formatting. This means:
+    - No bold text (like \`**text**\` or \`__text__\`).
+    - No italic text (like \`*text*\` or \`_text_\`).
+    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
+    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
+    - No Markdown headers (using \`#\`).
 `;
     if (appState.selectedSituation === "meeting-request") {
       const clientStatus = contextualData.clientStatus;
@@ -844,6 +850,11 @@ Instructions for Message Sequence:
 7.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
 8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
 9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
+10. **Output Format**: The content of each message must be plain text. Do not use any Markdown formatting. This means:
+    - No bold text (like \`**text**\` or \`__text__\`).
+    - No italic text (like \`*text*\` or \`_text_\`).
+    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
+    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
 `;
     if (appState.selectedSituation === "meeting-request") {
       const clientStatus = contextualData.clientStatus;
@@ -871,7 +882,13 @@ Instructions for Message Sequence:
     }
 
     const handleStreamChunk = (chunk) => {
-      outputTextDiv.textContent += chunk;
+      const plainTextChunk = chunk
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/__(.*?)__/g, "$1")
+        .replace(/_(.*?)_/g, "$1");
+
+      outputTextDiv.textContent += plainTextChunk;
       accumulatedResponse += chunk;
       outputTextDiv.scrollTop = outputTextDiv.scrollHeight;
     };
@@ -887,8 +904,18 @@ Instructions for Message Sequence:
     );
     appState.rawLastLlmResponse = fullResponse || accumulatedResponse;
 
+    let finalCleanedResponse = appState.rawLastLlmResponse;
+    if (finalCleanedResponse) {
+      finalCleanedResponse = finalCleanedResponse
+        .replace(/\*\*(.*?)\*\*/gs, "$1")
+        .replace(/\*(.*?)\*/gs, "$1")
+        .replace(/__(.*?)__/gs, "$1")
+        .replace(/_(.*?)_/gs, "$1")
+        .replace(/\[(.*?)\]\((.*?)\)/gs, "$1 ($2)");
+    }
+
     displayOutput(
-      appState.rawLastLlmResponse || "No content generated.",
+      finalCleanedResponse || "No content generated.",
       false,
       appState.outputType,
     );
@@ -915,13 +942,15 @@ Instructions for Message Sequence:
 
 function displayOutput(rawContent, isError = false, outputType = "email") {
   const placeholderText = "No content generated.";
-  const actualContent = rawContent !== placeholderText ? rawContent : "";
+
+  const actualContent =
+    rawContent && rawContent !== placeholderText ? rawContent : "";
 
   outputTextDiv.innerHTML = "";
 
   if (isError) {
     outputSectionDiv.classList.add("error");
-    outputTextDiv.textContent = rawContent;
+    outputTextDiv.textContent = actualContent;
     if (selectInputBoxBtn) {
       selectInputBoxBtn.style.display = "none";
     }
