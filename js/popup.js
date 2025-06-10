@@ -318,6 +318,16 @@ function setupContextualInputListeners() {
       await persistAppState();
     });
   }
+  // Add listeners for any other dynamic inputs if necessary, e.g., clientStatus
+  const clientStatusSelect = document.getElementById("meetingClientStatus");
+  if (clientStatusSelect) {
+    clientStatusSelect.addEventListener("change", async () => {
+      // Persist if needed, or just use its value at generation time
+      // For now, we'll just read it at generation time.
+      // If you want to save this preference, add it to appState and persist.
+      validateMainForm(); // Re-validate if this field affects generation readiness
+    });
+  }
 }
 
 function setupEventListeners() {
@@ -357,7 +367,7 @@ function setupEventListeners() {
         appState.lastRecipientName,
         appState.lastRecipientCompany,
       );
-      setupContextualInputListeners();
+      setupContextualInputListeners(); // Re-attach listeners for new inputs
       await persistAppState();
       validateMainForm();
     });
@@ -637,8 +647,17 @@ function updateCurrentModelDisplay() {
 }
 
 function validateMainForm() {
-  const isFormComplete =
+  let isFormComplete =
     appState.selectedSituation && userPromptTextarea.value.trim() !== "";
+
+  // Add validation for clientStatus if meeting-request is selected
+  if (appState.selectedSituation === "meeting-request") {
+    const clientStatusSelect = document.getElementById("meetingClientStatus");
+    if (clientStatusSelect && !clientStatusSelect.value) {
+      isFormComplete = false; // Client status must be selected for meeting requests
+    }
+  }
+
   generateBtn.disabled = !(isAiModelConfigured() && isFormComplete);
 }
 
@@ -718,6 +737,25 @@ Instructions:
 6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
 7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
 `;
+    // START: Customization for Meeting Request based on Client Status
+    if (appState.selectedSituation === "meeting-request") {
+      const clientStatus = contextualData.clientStatus; // 'new' or 'existing'
+
+      if (clientStatus === "existing") {
+        systemPrompt += `\nIMPORTANT: This meeting request is for an EXISTING client.
+- Be very concise and direct.
+- DO NOT include a general company overview or introduction of ${companyInfo.name}. The recipient already knows us.
+- Focus solely on the meeting's purpose, proposed agenda (if any from user), and logistics.
+- Maintain a professional and familiar tone suitable for an existing relationship.`;
+      } else {
+        // 'new' client or status not specified (default to new client behavior)
+        systemPrompt += `\nNOTE: This meeting request might be for a new contact or someone less familiar with ${companyInfo.name}.
+- If appropriate and brief, you can subtly weave in what ${companyInfo.name} does if it directly relates to the meeting's purpose.
+- However, the primary focus remains on the meeting request itself: purpose, agenda (if any from user), logistics.
+- Avoid a lengthy company introduction. Keep any company mention extremely brief and highly relevant.`;
+      }
+    }
+    // END: Customization for Meeting Request
   } else {
     // message_sequence
     const numMessages = appState.numMessagesForSequence;
@@ -757,6 +795,24 @@ Instructions for Message Sequence:
 8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
 9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
 `;
+    // START: Customization for Meeting Request (Message Sequence) based on Client Status
+    if (appState.selectedSituation === "meeting-request") {
+      const clientStatus = contextualData.clientStatus;
+
+      if (clientStatus === "existing") {
+        systemPrompt += `\nIMPORTANT (for existing client messages):
+- Keep messages extremely brief and to the point.
+- No company introduction needed. The recipient already knows us.
+- Focus on meeting purpose/logistics.`;
+      } else {
+        // 'new' client or status not specified
+        systemPrompt += `\nNOTE (for new client messages):
+- Messages should still be very brief.
+- A very short mention of APEXAI's relevance can be included only if absolutely vital for context in a short message format.
+- Focus on meeting purpose/logistics. Avoid company details unless critical.`;
+      }
+    }
+    // END: Customization for Meeting Request (Message Sequence)
   }
 
   try {

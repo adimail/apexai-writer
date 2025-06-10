@@ -1,11 +1,11 @@
-import { companyInfo } from './config.js';
+import { companyInfo } from "./config.js";
 
 function createFormGroup(labelText, inputElement) {
-  const group = document.createElement('div');
-  group.className = 'form-group contextual-input-group';
+  const group = document.createElement("div");
+  group.className = "form-group contextual-input-group";
 
   if (labelText) {
-    const label = document.createElement('label');
+    const label = document.createElement("label");
     label.textContent = labelText;
     if (inputElement.id) {
       label.htmlFor = inputElement.id;
@@ -17,8 +17,8 @@ function createFormGroup(labelText, inputElement) {
 }
 
 function createTextInput(id, placeholder, dataKey) {
-  const input = document.createElement('input');
-  input.type = 'text';
+  const input = document.createElement("input");
+  input.type = "text";
   input.id = id;
   input.placeholder = placeholder;
   input.dataset.key = dataKey;
@@ -26,7 +26,7 @@ function createTextInput(id, placeholder, dataKey) {
 }
 
 function createTextarea(id, placeholder, dataKey, rows = 2) {
-  const textarea = document.createElement('textarea');
+  const textarea = document.createElement("textarea");
   textarea.id = id;
   textarea.placeholder = placeholder;
   textarea.dataset.key = dataKey;
@@ -38,19 +38,19 @@ function createSelect(
   id,
   options,
   dataKey,
-  defaultOptionText = 'Select an option'
+  defaultOptionText = "Select an option",
 ) {
-  const select = document.createElement('select');
+  const select = document.createElement("select");
   select.id = id;
   select.dataset.key = dataKey;
 
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
   defaultOpt.textContent = defaultOptionText;
   select.appendChild(defaultOpt);
 
   options.forEach((opt) => {
-    const optionEl = document.createElement('option');
+    const optionEl = document.createElement("option");
     optionEl.value = opt.value;
     optionEl.textContent = opt.text;
     select.appendChild(optionEl);
@@ -59,8 +59,8 @@ function createSelect(
 }
 
 function createDateInput(id, dataKey) {
-  const input = document.createElement('input');
-  input.type = 'date';
+  const input = document.createElement("input");
+  input.type = "date";
   input.id = id;
   input.dataset.key = dataKey;
   return input;
@@ -69,197 +69,210 @@ function createDateInput(id, dataKey) {
 export function renderContextualInputs(
   situation,
   containerElement,
-  initialRecipientName = '',
-  initialRecipientCompany = ''
+  initialRecipientName = "",
+  initialRecipientCompany = "",
 ) {
-  containerElement.innerHTML = '';
+  containerElement.innerHTML = "";
 
   const recipientNameInput = createTextInput(
-    'contextualRecipientName',
-    'e.g., Priya Sharma',
-    'recipientName'
+    "contextualRecipientName",
+    "e.g., Priya Sharma",
+    "recipientName",
   );
   recipientNameInput.value = initialRecipientName;
 
   const recipientCompanyInput = createTextInput(
-    'contextualRecipientCompany',
-    'e.g., Innovatech Solutions',
-    'recipientCompany'
+    "contextualRecipientCompany",
+    "e.g., Innovatech Solutions",
+    "recipientCompany",
   );
   recipientCompanyInput.value = initialRecipientCompany;
 
   const commonRecipientNameField = {
-    label: 'Recipient Name',
+    label: "Recipient Name",
     el: recipientNameInput,
   };
   const commonRecipientCompanyField = {
-    label: 'Recipient Company Name',
+    label: "Recipient Company Name",
     el: recipientCompanyInput,
   };
 
   let situationSpecificFields = [];
 
   switch (situation) {
-    case 'cold-email':
+    case "cold-email":
       situationSpecificFields = [
         {
-          label: 'Recipient Company Industry/Domain',
+          label: "Recipient Company Industry/Domain",
           el: createTextInput(
-            'coldEmailIndustry',
-            'e.g., Fintech, Renewable Energy',
-            'recipientIndustry'
+            "coldEmailIndustry",
+            "e.g., Fintech, Renewable Energy",
+            "recipientIndustry",
           ),
         },
         {
-          label: 'Specific Pain Point to Address',
+          label: "Specific Pain Point to Address",
           el: createTextarea(
-            'coldEmailPainPoint',
-            'e.g., Streamlining data analytics pipeline...',
-            'painPoint'
+            "coldEmailPainPoint",
+            "e.g., Streamlining data analytics pipeline...",
+            "painPoint",
           ),
         },
         {
-          label: 'Desired Outcome',
+          label: "Desired Outcome",
           el: createSelect(
-            'coldEmailOutcome',
+            "coldEmailOutcome",
             [
-              { value: 'schedule-call', text: 'Schedule a call' },
-              { value: 'get-demo', text: 'Get a demo' },
-              { value: 'share-info', text: 'Share information' },
+              { value: "schedule-call", text: "Schedule a call" },
+              { value: "get-demo", text: "Get a demo" },
+              { value: "share-info", text: "Share information" },
             ],
-            'desiredOutcome',
-            'Select desired outcome'
+            "desiredOutcome",
+            "Select desired outcome",
           ),
         },
       ];
       break;
-    case 'followup':
+    case "followup":
       situationSpecificFields = [
         {
-          label: 'Previous Interaction Date ',
-          el: createDateInput('followupDate', 'previousInteractionDate'),
+          label: "Previous Interaction Date ",
+          el: createDateInput("followupDate", "previousInteractionDate"),
         },
         {
-          label: 'Key Point from Previous Interaction',
+          label: "Key Point from Previous Interaction",
           el: createTextarea(
-            'followupKeyPoint',
-            'e.g., Discussed their need for custom AI models...',
-            'previousKeyPoint'
+            "followupKeyPoint",
+            "e.g., Discussed their need for custom AI models...",
+            "previousKeyPoint",
           ),
         },
         {
-          label: 'New Value/Information to Offer',
+          label: "New Value/Information to Offer",
           el: createTextarea(
-            'followupNewValue',
-            'e.g., Our new whitepaper on MLOps best practices...',
-            'newValue'
+            "followupNewValue",
+            "e.g., Our new whitepaper on MLOps best practices...",
+            "newValue",
           ),
         },
       ];
       break;
-    case 'pitch-agency':
+    case "pitch-agency":
       situationSpecificFields = [
         {
           label: "Client's Main Challenge/Goal",
           el: createTextarea(
-            'pitchClientChallenge',
-            'e.g., Enhancing user experience on their platform...',
-            'clientChallenge'
+            "pitchClientChallenge",
+            "e.g., Enhancing user experience on their platform...",
+            "clientChallenge",
           ),
         },
         {
-          label: 'Specific APEXAI Service to Highlight',
+          label: "Specific APEXAI Service to Highlight",
           el: createSelect(
-            'pitchServiceHighlight',
+            "pitchServiceHighlight",
             companyInfo.detailedServices.map((s) => ({
               value: s.id,
               text: s.name,
             })),
-            'specificService',
-            'Select a service'
+            "specificService",
+            "Select a service",
           ),
         },
       ];
       break;
-    case 'proposal':
+    case "proposal":
       situationSpecificFields = [
         {
-          label: 'Project Scope Summary',
+          label: "Project Scope Summary",
           el: createTextarea(
-            'proposalScope',
-            'Briefly outline the proposed project...',
-            'projectScope',
-            3
+            "proposalScope",
+            "Briefly outline the proposed project...",
+            "projectScope",
+            3,
           ),
         },
         {
-          label: 'Key Client Objectives (1-3)',
+          label: "Key Client Objectives (1-3)",
           el: createTextarea(
-            'proposalObjectives',
-            'e.g., Develop a predictive maintenance system, Improve customer retention by 15%...',
-            'keyObjectives',
-            3
+            "proposalObjectives",
+            "e.g., Develop a predictive maintenance system, Improve customer retention by 15%...",
+            "keyObjectives",
+            3,
           ),
         },
       ];
       break;
-    case 'meeting-request':
+    case "meeting-request":
       situationSpecificFields = [
+        // New field for client status
         {
-          label: 'Purpose of Meeting',
-          el: createTextInput(
-            'meetingPurpose',
-            'e.g., Explore partnership for AI integration',
-            'meetingPurpose'
-          ),
-        },
-        {
-          label: 'Proposed Duration',
+          label: "Client Status",
           el: createSelect(
-            'meetingDuration',
+            "meetingClientStatus",
             [
-              { value: '15min', text: '15 minutes' },
-              { value: '30min', text: '30 minutes' },
-              { value: '45min', text: '45 minutes' },
-              { value: '60min', text: '1 hour' },
+              { value: "new", text: "New Client / Prospect" },
+              { value: "existing", text: "Existing Client" },
             ],
-            'meetingDuration',
-            'Select duration'
+            "clientStatus", // This dataKey will be used in popup.js
+            "Select client status",
           ),
         },
         {
-          label: 'Your General Availability ',
+          label: "Purpose of Meeting",
           el: createTextInput(
-            'meetingAvailability',
-            'e.g., Tue/Thu mornings next week',
-            'availability'
+            "meetingPurpose",
+            "e.g., Explore partnership for AI integration",
+            "meetingPurpose",
+          ),
+        },
+        {
+          label: "Proposed Duration",
+          el: createSelect(
+            "meetingDuration",
+            [
+              { value: "15min", text: "15 minutes" },
+              { value: "30min", text: "30 minutes" },
+              { value: "45min", text: "45 minutes" },
+              { value: "60min", text: "1 hour" },
+            ],
+            "meetingDuration",
+            "Select duration",
+          ),
+        },
+        {
+          label: "Your General Availability ",
+          el: createTextInput(
+            "meetingAvailability",
+            "e.g., Tue/Thu mornings next week",
+            "availability",
           ),
         },
       ];
       break;
-    case 'thank-you':
+    case "thank-you":
       situationSpecificFields = [
         {
-          label: 'Reason for Thanks',
+          label: "Reason for Thanks",
           el: createSelect(
-            'thankYouReason',
+            "thankYouReason",
             [
-              { value: 'meeting', text: 'Recent Meeting' },
-              { value: 'referral', text: 'Referral' },
-              { value: 'new-business', text: 'New Business/Project' },
-              { value: 'feedback', text: 'Valuable Feedback' },
-              { value: 'general-appreciation', text: 'General Appreciation' },
+              { value: "meeting", text: "Recent Meeting" },
+              { value: "referral", text: "Referral" },
+              { value: "new-business", text: "New Business/Project" },
+              { value: "feedback", text: "Valuable Feedback" },
+              { value: "general-appreciation", text: "General Appreciation" },
             ],
-            'reasonForThanks',
-            'Select reason'
+            "reasonForThanks",
+            "Select reason",
           ),
         },
         {
-          label: 'Specific Detail to Mention',
+          label: "Specific Detail to Mention",
           el: createTextarea(
-            'thankYouDetail',
-            'e.g., Your insights on market trends were very helpful...',
-            'specificDetail'
+            "thankYouDetail",
+            "e.g., Your insights on market trends were very helpful...",
+            "specificDetail",
           ),
         },
       ];
@@ -275,9 +288,9 @@ export function renderContextualInputs(
   ];
 
   if (allFields.length > 0) {
-    const heading = document.createElement('h4');
-    heading.textContent = 'Additional Context';
-    heading.className = 'contextual-inputs-heading';
+    const heading = document.createElement("h4");
+    heading.textContent = "Additional Context";
+    heading.className = "contextual-inputs-heading";
     containerElement.appendChild(heading);
 
     allFields.forEach((field) => {
@@ -288,12 +301,12 @@ export function renderContextualInputs(
 
 export function getContextualFormData(containerElement) {
   const data = {};
-  const inputs = containerElement.querySelectorAll('[data-key]');
+  const inputs = containerElement.querySelectorAll("[data-key]");
   inputs.forEach((input) => {
     const key = input.dataset.key;
-    if (input.type === 'checkbox') {
+    if (input.type === "checkbox") {
       data[key] = input.checked;
-    } else if (input.type === 'range') {
+    } else if (input.type === "range") {
       data[key] = input.value;
     } else {
       data[key] = input.value.trim();
