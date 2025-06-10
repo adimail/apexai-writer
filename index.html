@@ -32,25 +32,64 @@
 
           <!-- Output Type Selection -->
           <div class="form-group">
-            <label for="outputTypeSelect">I want to write an...</label>
-            <select id="outputTypeSelect">
-              <option value="email" selected>Email</option>
-              <option value="message_sequence">
-                Message Sequence (for Chat/Social)
-              </option>
-            </select>
+            <label>I want to write an...</label>
+            <div class="radio-group" id="outputTypeRadioGroup">
+              <div class="radio-option">
+                <input
+                  type="radio"
+                  id="outputTypeEmail"
+                  name="outputType"
+                  value="email"
+                />
+                <label for="outputTypeEmail">Email</label>
+              </div>
+              <div class="radio-option">
+                <input
+                  type="radio"
+                  id="outputTypeMessageSequence"
+                  name="outputType"
+                  value="message_sequence"
+                />
+                <label for="outputTypeMessageSequence">Messages</label>
+              </div>
+            </div>
           </div>
 
           <!-- Number of Messages (conditional) -->
           <div class="form-group" id="numMessagesGroup" style="display: none">
-            <label for="numMessagesSelect"
-              >Number of Messages in Sequence</label
+            <label>Number of Messages in Sequence</label>
+            <div
+              class="radio-group radio-group-horizontal-3col"
+              id="numMessagesRadioGroup"
             >
-            <select id="numMessagesSelect">
-              <option value="1">1 Message</option>
-              <option value="2" selected>2 Messages</option>
-              <option value="3">3 Messages</option>
-            </select>
+              <div class="radio-option">
+                <input
+                  type="radio"
+                  id="numMessages1"
+                  name="numMessages"
+                  value="1"
+                />
+                <label for="numMessages1">1</label>
+              </div>
+              <div class="radio-option">
+                <input
+                  type="radio"
+                  id="numMessages2"
+                  name="numMessages"
+                  value="2"
+                />
+                <label for="numMessages2">2</label>
+              </div>
+              <div class="radio-option">
+                <input
+                  type="radio"
+                  id="numMessages3"
+                  name="numMessages"
+                  value="3"
+                />
+                <label for="numMessages3">3</label>
+              </div>
+            </div>
           </div>
 
           <!-- Situation Selection -->

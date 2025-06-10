@@ -259,6 +259,77 @@ textarea {
   min-height: 50px;
 }
 
+/* Radio Button Styling */
+.radio-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Default to 2 columns */
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.radio-group-horizontal-3col {
+  grid-template-columns: repeat(3, 1fr); /* Specific 3-column layout */
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--border-radius-md);
+  background-color: var(--content-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease-in-out,
+    background-color 0.15s ease-in-out;
+}
+
+.radio-option:hover {
+  border-color: var(--primary-color);
+  background-color: #eaf5ff;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 10px;
+  width: auto;
+  height: auto;
+  vertical-align: middle;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+  padding: 0;
+  border: none;
+}
+
+.radio-option label {
+  margin-bottom: 0;
+  font-weight: normal;
+  font-size: 13px;
+  color: var(--text-dark);
+  cursor: pointer;
+  flex-grow: 1;
+  line-height: 1.3;
+}
+
+.radio-option input[type="radio"]:checked + label {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+/* Contextual radio buttons specific styling */
+#contextualInputsContainer .radio-group {
+  /* Inherits global .radio-group styles, including grid layout */
+  /* If contextual radios also need to be 3-col, add .radio-group-horizontal-3col class to them in ui.js */
+}
+#contextualInputsContainer .radio-option {
+  padding: 6px 10px;
+}
+#contextualInputsContainer .radio-option label {
+  font-size: 12px;
+}
+#contextualInputsContainer .radio-option input[type="radio"] {
+  margin-right: 8px;
+}
+
 .generate-btn {
   width: 100%;
   padding: 10px 12px;

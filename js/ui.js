@@ -7,8 +7,16 @@ function createFormGroup(labelText, inputElement) {
   if (labelText) {
     const label = document.createElement("label");
     label.textContent = labelText;
-    if (inputElement.id) {
-      label.htmlFor = inputElement.id;
+    if (
+      inputElement.id ||
+      (inputElement.classList && inputElement.classList.contains("radio-group"))
+    ) {
+      // For radio groups, the label is for the group, not a specific input ID.
+      // We can associate it if the group has an ID, or just let it be a general label.
+      // For now, if inputElement is a radio group, we don't set `htmlFor`.
+      if (inputElement.id && !inputElement.classList.contains("radio-group")) {
+        label.htmlFor = inputElement.id;
+      }
     }
     group.appendChild(label);
   }
@@ -66,11 +74,50 @@ function createDateInput(id, dataKey) {
   return input;
 }
 
+/**
+ * Creates a group of radio buttons.
+ * @param {string} name - The common name for the radio buttons in the group.
+ * @param {Array<{value: string, text: string}>} options - Array of options for radio buttons.
+ * @param {string} dataKey - The data-key attribute for the group container, used for form data retrieval.
+ * @param {string|null} [initialValue=null] - The value of the radio button to be checked initially.
+ * @returns {HTMLDivElement} The container div for the radio group.
+ */
+function createRadioGroup(name, options, dataKey, initialValue = null) {
+  const groupContainer = document.createElement("div");
+  groupContainer.className = "radio-group"; // Apply styling
+  groupContainer.dataset.key = dataKey; // For getContextualFormData
+
+  options.forEach((opt) => {
+    const optionDiv = document.createElement("div");
+    optionDiv.className = "radio-option"; // Apply styling
+
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = name;
+    radio.id = `${name}_${opt.value.replace(/\s+/g, "-")}`; // Ensure ID is valid
+    radio.value = opt.value;
+
+    if (initialValue === opt.value) {
+      radio.checked = true;
+    }
+
+    const label = document.createElement("label");
+    label.htmlFor = radio.id;
+    label.textContent = opt.text;
+
+    optionDiv.appendChild(radio);
+    optionDiv.appendChild(label);
+    groupContainer.appendChild(optionDiv);
+  });
+  return groupContainer;
+}
+
 export function renderContextualInputs(
   situation,
   containerElement,
   initialRecipientName = "",
   initialRecipientCompany = "",
+  // initialClientStatus = null // Not used for client status as it should be selected each time
 ) {
   containerElement.innerHTML = "";
 
@@ -205,17 +252,16 @@ export function renderContextualInputs(
       break;
     case "meeting-request":
       situationSpecificFields = [
-        // New field for client status
         {
           label: "Client Status",
-          el: createSelect(
-            "meetingClientStatus",
+          el: createRadioGroup(
+            "meetingClientStatusRadio", // Unique name for this radio group
             [
               { value: "new", text: "New Client / Prospect" },
               { value: "existing", text: "Existing Client" },
             ],
-            "clientStatus", // This dataKey will be used in popup.js
-            "Select client status",
+            "clientStatus", // This dataKey will be used by getContextualFormData
+            null, // No initial value, forces user selection.
           ),
         },
         {
@@ -301,15 +347,19 @@ export function renderContextualInputs(
 
 export function getContextualFormData(containerElement) {
   const data = {};
-  const inputs = containerElement.querySelectorAll("[data-key]");
-  inputs.forEach((input) => {
-    const key = input.dataset.key;
-    if (input.type === "checkbox") {
-      data[key] = input.checked;
-    } else if (input.type === "range") {
-      data[key] = input.value;
+  const elementsWithDataKey = containerElement.querySelectorAll("[data-key]");
+  elementsWithDataKey.forEach((element) => {
+    const key = element.dataset.key;
+    if (element.classList.contains("radio-group")) {
+      const checkedRadio = element.querySelector("input[type='radio']:checked");
+      data[key] = checkedRadio ? checkedRadio.value : ""; // Store empty if none selected
+    } else if (element.type === "checkbox") {
+      data[key] = element.checked;
+    } else if (element.type === "range") {
+      data[key] = element.value;
     } else {
-      data[key] = input.value.trim();
+      // Handles text, textarea, select, date
+      data[key] = element.value.trim();
     }
   });
   return data;

@@ -47,7 +47,7 @@ let appState = {
   selectedSituation: null,
   lastRecipientName: "",
   lastRecipientCompany: "",
-  preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY, // Store the key (0-3)
+  preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY,
 };
 
 const mainView = document.getElementById("mainView");
@@ -58,9 +58,9 @@ const settingsBtn = document.getElementById("settingsBtn");
 const currentModelDisplay = document.getElementById("currentModelDisplay");
 
 const userPromptTextarea = document.getElementById("userPrompt");
-const outputTypeSelect = document.getElementById("outputTypeSelect");
+const outputTypeRadioGroup = document.getElementById("outputTypeRadioGroup");
 const numMessagesGroup = document.getElementById("numMessagesGroup");
-const numMessagesSelect = document.getElementById("numMessagesSelect");
+const numMessagesRadioGroup = document.getElementById("numMessagesRadioGroup");
 const situationLabel = document.getElementById("situationLabel");
 const situationBtns = document.querySelectorAll(".situation-btn");
 const contextualInputsContainer = document.getElementById(
@@ -149,8 +149,33 @@ async function initializeApp() {
     }
   }
 
-  outputTypeSelect.value = appState.outputType;
-  numMessagesSelect.value = appState.numMessagesForSequence.toString();
+  const currentOutputTypeRadio = outputTypeRadioGroup.querySelector(
+    `input[name="outputType"][value="${appState.outputType}"]`,
+  );
+  if (currentOutputTypeRadio) {
+    currentOutputTypeRadio.checked = true;
+  } else {
+    const emailRadio = outputTypeRadioGroup.querySelector(
+      'input[name="outputType"][value="email"]',
+    );
+    if (emailRadio) emailRadio.checked = true;
+    appState.outputType = "email";
+  }
+
+  // Initialize numMessagesRadioGroup
+  const currentNumMessagesRadio = numMessagesRadioGroup.querySelector(
+    `input[name="numMessages"][value="${appState.numMessagesForSequence}"]`,
+  );
+  if (currentNumMessagesRadio) {
+    currentNumMessagesRadio.checked = true;
+  } else {
+    const defaultNumRadio = numMessagesRadioGroup.querySelector(
+      'input[name="numMessages"][value="2"]', // Default to 2 messages
+    );
+    if (defaultNumRadio) defaultNumRadio.checked = true;
+    appState.numMessagesForSequence = 2;
+  }
+
   updateOutputTypeUI();
 
   if (appState.selectedSituation) {
@@ -169,7 +194,6 @@ async function initializeApp() {
     setupContextualInputListeners();
   }
 
-  // Initialize message length slider
   if (settingsMessageLengthSlider && messageLengthOutput) {
     settingsMessageLengthSlider.value = appState.preferredMessageLength;
     messageLengthOutput.textContent =
@@ -318,14 +342,15 @@ function setupContextualInputListeners() {
       await persistAppState();
     });
   }
-  // Add listeners for any other dynamic inputs if necessary, e.g., clientStatus
-  const clientStatusSelect = document.getElementById("meetingClientStatus");
-  if (clientStatusSelect) {
-    clientStatusSelect.addEventListener("change", async () => {
-      // Persist if needed, or just use its value at generation time
-      // For now, we'll just read it at generation time.
-      // If you want to save this preference, add it to appState and persist.
-      validateMainForm(); // Re-validate if this field affects generation readiness
+
+  const clientStatusRadioGroup = contextualInputsContainer.querySelector(
+    ".radio-group[data-key='clientStatus']",
+  );
+  if (clientStatusRadioGroup) {
+    clientStatusRadioGroup.addEventListener("change", (e) => {
+      if (e.target.type === "radio") {
+        validateMainForm();
+      }
     });
   }
 }
@@ -342,18 +367,21 @@ function setupEventListeners() {
 
   userPromptTextarea.addEventListener("input", validateMainForm);
 
-  outputTypeSelect.addEventListener("change", async (e) => {
-    appState.outputType = e.target.value;
-    if (appState.outputType === "message_sequence") {
-      appState.numMessagesForSequence = parseInt(numMessagesSelect.value, 10);
+  outputTypeRadioGroup.addEventListener("change", async (e) => {
+    if (e.target.type === "radio" && e.target.name === "outputType") {
+      appState.outputType = e.target.value;
+      // numMessagesForSequence is now handled by its own radio group listener
+      updateOutputTypeUI();
+      await persistAppState();
     }
-    updateOutputTypeUI();
-    await persistAppState();
   });
 
-  numMessagesSelect.addEventListener("change", async (e) => {
-    appState.numMessagesForSequence = parseInt(e.target.value, 10);
-    await persistAppState();
+  // Event listener for numMessagesRadioGroup
+  numMessagesRadioGroup.addEventListener("change", async (e) => {
+    if (e.target.type === "radio" && e.target.name === "numMessages") {
+      appState.numMessagesForSequence = parseInt(e.target.value, 10);
+      await persistAppState();
+    }
   });
 
   situationBtns.forEach((btn) => {
@@ -367,7 +395,7 @@ function setupEventListeners() {
         appState.lastRecipientName,
         appState.lastRecipientCompany,
       );
-      setupContextualInputListeners(); // Re-attach listeners for new inputs
+      setupContextualInputListeners();
       await persistAppState();
       validateMainForm();
     });
@@ -650,11 +678,19 @@ function validateMainForm() {
   let isFormComplete =
     appState.selectedSituation && userPromptTextarea.value.trim() !== "";
 
-  // Add validation for clientStatus if meeting-request is selected
   if (appState.selectedSituation === "meeting-request") {
-    const clientStatusSelect = document.getElementById("meetingClientStatus");
-    if (clientStatusSelect && !clientStatusSelect.value) {
-      isFormComplete = false; // Client status must be selected for meeting requests
+    const clientStatusRadioGroup = contextualInputsContainer.querySelector(
+      ".radio-group[data-key='clientStatus']",
+    );
+    if (clientStatusRadioGroup) {
+      const checkedRadio = clientStatusRadioGroup.querySelector(
+        "input[type='radio']:checked",
+      );
+      if (!checkedRadio || !checkedRadio.value) {
+        isFormComplete = false;
+      }
+    } else {
+      isFormComplete = false;
     }
   }
 
@@ -737,9 +773,8 @@ Instructions:
 6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
 7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
 `;
-    // START: Customization for Meeting Request based on Client Status
     if (appState.selectedSituation === "meeting-request") {
-      const clientStatus = contextualData.clientStatus; // 'new' or 'existing'
+      const clientStatus = contextualData.clientStatus;
 
       if (clientStatus === "existing") {
         systemPrompt += `\nIMPORTANT: This meeting request is for an EXISTING client.
@@ -748,16 +783,13 @@ Instructions:
 - Focus solely on the meeting's purpose, proposed agenda (if any from user), and logistics.
 - Maintain a professional and familiar tone suitable for an existing relationship.`;
       } else {
-        // 'new' client or status not specified (default to new client behavior)
         systemPrompt += `\nNOTE: This meeting request might be for a new contact or someone less familiar with ${companyInfo.name}.
 - If appropriate and brief, you can subtly weave in what ${companyInfo.name} does if it directly relates to the meeting's purpose.
 - However, the primary focus remains on the meeting request itself: purpose, agenda (if any from user), logistics.
 - Avoid a lengthy company introduction. Keep any company mention extremely brief and highly relevant.`;
       }
     }
-    // END: Customization for Meeting Request
   } else {
-    // message_sequence
     const numMessages = appState.numMessagesForSequence;
     systemPrompt = `
 You are an LLM assistant for ${companyInfo.name}.
@@ -795,7 +827,6 @@ Instructions for Message Sequence:
 8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
 9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
 `;
-    // START: Customization for Meeting Request (Message Sequence) based on Client Status
     if (appState.selectedSituation === "meeting-request") {
       const clientStatus = contextualData.clientStatus;
 
@@ -805,14 +836,12 @@ Instructions for Message Sequence:
 - No company introduction needed. The recipient already knows us.
 - Focus on meeting purpose/logistics.`;
       } else {
-        // 'new' client or status not specified
         systemPrompt += `\nNOTE (for new client messages):
 - Messages should still be very brief.
 - A very short mention of APEXAI's relevance can be included only if absolutely vital for context in a short message format.
 - Focus on meeting purpose/logistics. Avoid company details unless critical.`;
       }
     }
-    // END: Customization for Meeting Request (Message Sequence)
   }
 
   try {
