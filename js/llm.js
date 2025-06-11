@@ -47,21 +47,17 @@ export async function callLlmProvider(
     apiKeyPresent: !!apiKey,
     streamingEnabled: typeof onChunkReceived === "function",
   });
-  // console.debug("System Prompt:", systemPrompt); // Can be very long
-  // console.debug("Final User Prompt (with context):", finalUserPrompt); // Can be long
 
   if (provider === "google") {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
     const requestBody = {
       contents: [{ role: "user", parts: [{ text: finalUserPrompt }] }],
-      // Example: Add generationConfig if needed
-      // generationConfig: {
-      //   temperature: 0.7,
-      //   maxOutputTokens: 1024, // Adjust as needed
-      //   topP: 0.8,
-      //   topK: 10,
-      // },
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 10,
+      },
     };
 
     if (systemPrompt) {
@@ -104,15 +100,12 @@ export async function callLlmProvider(
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
-          // End of stream
           break;
         }
 
         buffer += decoder.decode(value, { stream: true });
 
         let position;
-        // Process line by line, SSE events are line-based.
-        // Each `data:` line for Gemini streamGenerateContent is expected to be a JSON object.
         while ((position = buffer.indexOf("\n")) >= 0) {
           const line = buffer.substring(0, position).trim();
           buffer = buffer.substring(position + 1);
@@ -122,7 +115,6 @@ export async function callLlmProvider(
             if (jsonData) {
               try {
                 const parsedJson = JSON.parse(jsonData);
-                // Extract text from the Gemini response structure
                 const textChunk =
                   parsedJson?.candidates?.[0]?.content?.parts?.[0]?.text;
 
@@ -132,13 +124,7 @@ export async function callLlmProvider(
                   }
                   fullResponseText += textChunk;
                 }
-                // Optional: Check for finishReason for logging or specific logic
-                // const finishReason = parsedJson?.candidates?.[0]?.finishReason;
-                // if (finishReason && finishReason !== "FINISH_REASON_UNSPECIFIED" && finishReason !== "NOT_FINISHED") {
-                //   console.debug("Gemini stream part finished with reason:", finishReason);
-                // }
               } catch (e) {
-                // Log error but continue processing stream if possible
                 console.warn(
                   "Error parsing JSON from stream line:",
                   e,
@@ -153,24 +139,17 @@ export async function callLlmProvider(
       return fullResponseText;
     } catch (error) {
       console.error("Error calling Google Gemini API:", error);
-      // Ensure the error is re-thrown so it can be caught by the UI layer
       throw error;
     }
   } else if (provider === "openai") {
-    // Updated simulation for OpenAI to also support onChunkReceived for UI testing
     console.log(
       "OpenAI provider selected. Using simulation with potential streaming.",
     );
-    // const messages = [ // This would be used for an actual OpenAI call
-    //   { role: "system", content: systemPrompt },
-    //   { role: "user", content: finalUserPrompt },
-    // ];
 
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Shorter delay for simulation start
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     let simulatedResponse;
     if (systemPrompt.includes("MESSAGE 1:") && systemPrompt.includes("---")) {
-      // Crude check for message sequence
       const numMessages =
         systemPrompt.match(/Generate a sequence of (\d+) short/)?.[1] || 2;
       simulatedResponse = "";
@@ -181,35 +160,31 @@ export async function callLlmProvider(
         }
       }
     } else {
-      // Email simulation
       simulatedResponse = `This is a simulated OpenAI (${model}) email response for your request about "${userPrompt.substring(0, 50)}...".\n\n`;
       simulatedResponse += `The model would elaborate based on the system prompt and user context. This simulation demonstrates how streaming might appear. Each word appears sequentially.`;
     }
 
     if (typeof onChunkReceived === "function") {
-      const words = simulatedResponse.split(/(\s+|\n---\n)/); // Split by spaces or "---" lines, keeping them
+      const words = simulatedResponse.split(/(\s+|\n---\n)/);
       for (const word of words) {
         if (word) {
-          // Avoid empty strings from multiple spaces
           onChunkReceived(word);
           await new Promise((resolve) =>
             setTimeout(resolve, 30 + Math.random() * 50),
-          ); // Simulate chunk delay
+          );
         }
       }
-      return simulatedResponse; // Return full response after streaming all chunks
+      return simulatedResponse;
     } else {
-      return simulatedResponse; // Return full response directly if no chunk callback
+      return simulatedResponse;
     }
   } else {
-    // Fallback for other providers or if provider is not set
     console.warn(
       `Provider '${provider}' not recognized or not implemented for streaming. Using generic simulation.`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const simulatedResponse = `Simulated response for ${provider} - ${model}.\nUser prompt: ${userPrompt.substring(0, 100)}...`;
     if (typeof onChunkReceived === "function") {
-      // Simulate basic chunking for the generic fallback
       onChunkReceived(
         simulatedResponse.substring(0, simulatedResponse.length / 2),
       );
@@ -243,23 +218,8 @@ async function makeActualApiCall(provider, model, apiKey, messages) {
   simulatedResponse += `Provider: ${provider}, Model: ${model}.\n`;
 
   if (provider === "openai") {
-    // Actual OpenAI non-streaming call logic would go here if this function were used for it.
-    // Example:
-    // const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${apiKey}`
-    //   },
-    //   body: JSON.stringify({ model: model, messages: messages })
-    // });
-    // if (!response.ok) { /* ... error handling ... */ }
-    // const data = await response.json();
-    // return data.choices[0]?.message?.content || "No content received.";
-    return simulatedResponse; // Return simulation for now
+    return simulatedResponse;
   } else if (provider === "google") {
-    // Non-streaming Google calls are also possible but streamGenerateContent is preferred for chat.
-    // The streaming logic is now in callLlmProvider.
     console.warn(
       "makeActualApiCall for Google is simulated; streaming is primary in callLlmProvider.",
     );

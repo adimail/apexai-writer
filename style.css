@@ -207,9 +207,6 @@ textarea {
   background-color: var(--content-bg);
 }
 
-.input-group-details:last-of-type {
-}
-
 .input-group-summary {
   padding: 10px 12px;
   font-weight: 500;
@@ -373,8 +370,6 @@ textarea {
   color: var(--primary-color);
 }
 
-#contextualInputsContainer .radio-group {
-}
 #contextualInputsContainer .radio-option {
   padding: 6px 10px;
 }
@@ -383,6 +378,12 @@ textarea {
 }
 #contextualInputsContainer .radio-option input[type="radio"] {
   margin-right: 8px;
+}
+
+.input-help-text {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 4px;
 }
 
 .generate-btn {
@@ -754,4 +755,10 @@ textarea {
 
 #messageLengthTicks option {
   padding: 0;
+}
+
+#meetingActionSpecificFields .form-group {
+  padding-left: 10px;
+  border-left: 2px solid #e0e0e0;
+  margin-left: 5px;
 }

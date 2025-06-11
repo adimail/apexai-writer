@@ -13,7 +13,7 @@
  * @param {object} promptData.companyInfo - The company information object.
  * @param {object} promptData.situationTemplates - The situation templates object.
  * @param {object} promptData.messageLengthOptions - The message length options object.
- * @param {object} promptData.contextualData - Contextual form data (e.g., clientStatus).
+ * @param {object} promptData.contextualData - Contextual form data (e.g., clientStatus, meetingAction, etc.).
  * @param {string} promptData.defaultMessageLengthKey - The default key for message length if preferred is not found.
  * @returns {string} The constructed system prompt.
  */
@@ -34,13 +34,9 @@ export function buildSystemPrompt({
     messageLengthOptions[preferredMessageLengthKey]?.promptInstruction ||
     messageLengthOptions[defaultMessageLengthKey].promptInstruction;
 
-  let systemPrompt = "";
-
-  if (outputType === "email") {
-    systemPrompt = `
+  let baseSystemPrompt = `
 You are an LLM assistant for ${companyInfo.name}.
-Your goal is to help employees write effective emails.
-The email is being written by ${writerName} from APEXAI.
+Your goal is to help ${writerName} from APEXAI write effective ${outputType === "email" ? "emails" : "short messages"}.
 
 Company Information (Fixed - Do Not Deviate):
 - Name: ${companyInfo.name}
@@ -55,105 +51,109 @@ Company Information (Fixed - Do Not Deviate):
 - Services Page: ${companyInfo.servicesPage}
 - Projects Page: ${companyInfo.projectsPage}
 
-Task:
-The user wants to write an email for a "${selectedSituation.replace(/-/g, " ")}" context.
-The general template/guideline for this task is: "${situationTemplates[selectedSituation]}"
-
-User's Core Message & Additional Context (if provided):
-(This will be provided in the user message part of the prompt)
-
-Instructions:
-1.  Carefully review all the fixed company information and the user's specific requirements.
-2.  Generate an email that fulfills the task, incorporating relevant company details naturally.
+General Instructions:
+1.  Carefully review all fixed company information and the user's specific requirements.
+2.  Generate content that fulfills the task, incorporating relevant company details naturally and only where appropriate.
 3.  Adhere to the desired tone: ${companyInfo.tone.toLowerCase()}.
 4.  Regarding length: ${lengthInstruction}
-5.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
-6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
-7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
-8.  **Output Format**: The entire email body must be plain text. Do not use any Markdown formatting. This means:
-    - No bold text (like \`**text**\` or \`__text__\`).
-    - No italic text (like \`*text*\` or \`_text_\`).
-    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
-    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
-    - No Markdown headers (using \`#\`).
+5.  Ensure the output is tailored to the user's input, the selected situation, and all additional context provided.
+6.  If the user's requirements are vague, make reasonable assumptions based on the company context and the specific task.
+7.  The output should be ONLY the generated ${outputType === "email" ? "email" : "message(s)"}, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
+8.  **Output Format**: The entire ${outputType === "email" ? "email body" : "message content"} must be plain text. Do not use any Markdown formatting (no bold, italics, Markdown links, lists, or headers). If a URL is necessary, write it out directly (e.g., https://www.example.com).
 `;
-    if (selectedSituation === "meeting-request") {
-      const clientStatus = contextualData.clientStatus;
 
-      if (clientStatus === "existing") {
-        systemPrompt += `\nIMPORTANT: This meeting request is for an EXISTING client.
-- Be very concise and direct.
-- DO NOT include a general company overview or introduction of ${companyInfo.name}. The recipient already knows us.
-- Focus solely on the meeting's purpose, proposed agenda (if any from user), and logistics.
-- Maintain a professional and familiar tone suitable for an existing relationship.`;
-      } else {
-        // Default to new/prospect if clientStatus is not 'existing' or is undefined
-        systemPrompt += `\nNOTE: This meeting request might be for a new contact or someone less familiar with ${companyInfo.name}.
-- If appropriate and brief, you can subtly weave in what ${companyInfo.name} does if it directly relates to the meeting's purpose.
-- However, the primary focus remains on the meeting request itself: purpose, agenda (if any from user), logistics.
-- Avoid a lengthy company introduction. Keep any company mention extremely brief and highly relevant.`;
-      }
+  if (outputType === "message_sequence") {
+    baseSystemPrompt += `
+Instructions for Message Sequence:
+- Generate a sequence of ${numMessagesForSequence} short, distinct messages.
+- Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
+- After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
+  Example for ${numMessagesForSequence} messages:
+  MESSAGE 1:
+  [Content of message 1]
+  ${numMessagesForSequence > 1 ? "---\nMESSAGE 2:\n[Content of message 2]" : ""}
+  ${numMessagesForSequence > 2 ? "---\nMESSAGE 3:\n[Content of message 3]" : ""}
+  (Ensure the "---" separator is used correctly between messages if more than one.)
+- Keep messages concise and suitable for informal chat platforms (Discord, WhatsApp, Slack).
+`;
+  }
+
+  let taskSpecificInstructions = "";
+
+  if (selectedSituation === "meeting-request") {
+    const {
+      clientStatus,
+      meetingAction,
+      meetingPurpose, // for schedule
+      meetingDuration, // for schedule
+      availability, // for schedule
+      meetingIdentifier, // for cancel, reschedule, reminder, join_request
+      cancellationReason, // for cancel
+      originalMeetingTime, // for reschedule
+      rescheduleReason, // for reschedule
+      newAvailability, // for reschedule
+      meetingTime, // for reminder
+      reminderKeyPoints, // for reminder
+      joinReason, // for join_request
+    } = contextualData;
+
+    taskSpecificInstructions += `\nTask: Meeting Request - Action: ${meetingAction}\n`;
+    taskSpecificInstructions += `Client Status: ${clientStatus || "Not specified"}.\n`;
+
+    if (clientStatus === "existing") {
+      taskSpecificInstructions += `- For EXISTING clients: Be concise, direct. No general company intro. Focus on the meeting action. Maintain a professional, familiar tone.\n`;
+    } else {
+      taskSpecificInstructions += `- For NEW/PROSPECT clients: Subtly weave in ${companyInfo.name}'s relevance if it directly relates to the meeting's purpose, but keep it brief. Primary focus is the meeting action.\n`;
+    }
+
+    switch (meetingAction) {
+      case "schedule":
+        taskSpecificInstructions += `Objective: Schedule a new meeting.
+- Purpose: ${meetingPurpose || "User will provide in core message."}
+- Proposed Duration: ${meetingDuration || "Not specified."}
+- Writer's Availability: ${availability || "User may specify or ask recipient."}
+- Clearly state the purpose, suggest agenda if appropriate, and offer flexible timing. Respect recipient's time.`;
+        break;
+      case "cancel":
+        taskSpecificInstructions += `Objective: Cancel an existing meeting.
+- Meeting to Cancel (Topic/Identifier): ${meetingIdentifier || "User will provide in core message."}
+- Reason for Cancellation: ${cancellationReason || "Not specified, be polite and general if so."}
+- Write a polite cancellation. If no reason is provided, offer a general apology for any inconvenience. Consider if offering to reschedule is appropriate (user prompt might indicate this).`;
+        break;
+      case "reschedule":
+        taskSpecificInstructions += `Objective: Reschedule an existing meeting.
+- Meeting to Reschedule (Topic/Identifier): ${meetingIdentifier || "User will provide in core message."}
+- Original Meeting Time: ${originalMeetingTime || "Not specified."}
+- Reason for Rescheduling: ${rescheduleReason || "Not specified, be polite."}
+- Writer's New Availability / Proposed Times: ${newAvailability || "Ask for recipient's availability or state flexibility."}
+- Politely request to reschedule. Explain briefly if a reason is provided. Offer new times or ask for their availability.`;
+        break;
+      case "reminder":
+        taskSpecificInstructions += `Objective: Send a reminder for an upcoming meeting.
+- Meeting (Topic/Identifier): ${meetingIdentifier || "User will provide in core message."}
+- Meeting Date & Time: ${meetingTime || "User will provide in core message."}
+- Key Points/Agenda to Remind: ${reminderKeyPoints || "None specified, just a general reminder."}
+- Send a friendly reminder. Confirm date/time. Briefly mention key points if provided.`;
+        break;
+      case "join_request":
+        taskSpecificInstructions += `Objective: Request to join an ongoing or upcoming meeting.
+- Meeting (Topic/Identifier): ${meetingIdentifier || "User will provide in core message."}
+- Reason for Wanting to Join: ${joinReason || "User will provide in core message."}
+- Write a concise request to join. Clearly state the reason. If for an ongoing meeting, imply urgency and politeness.`;
+        break;
+      default:
+        taskSpecificInstructions += `Objective: General meeting request (action not specified, use default behavior).
+- The user wants to arrange a meeting. Use the user's core message for purpose and details.
+- ${situationTemplates["meeting-request"]}`;
     }
   } else {
-    // outputType === 'message_sequence'
-    const numMessages = numMessagesForSequence;
-    systemPrompt = `
-You are an LLM assistant for ${companyInfo.name}.
-Your goal is to help ${writerName} write a sequence of effective short messages for platforms like Discord, WhatsApp, or Slack.
-
-Company Information (Fixed - Do Not Deviate):
-- Name: ${companyInfo.name}
-- Industry: ${companyInfo.industry}
-- Core Services (briefly, if relevant for short messages): ${companyInfo.servicesSummary}
-- Unique Value Proposition (if adaptable to short form): "${companyInfo.uniqueValue}"
-- Desired Tone: ${companyInfo.tone} (adapt for brevity on chat platforms)
-- Website: ${companyInfo.url}
-
+    taskSpecificInstructions = `
 Task:
-The user wants to write a sequence of short messages for a "${selectedSituation.replace(/-/g, " ")}" context.
-The general email-focused guideline for this task is: "${situationTemplates[selectedSituation]}"
-
-User's Core Message & Additional Context (if provided):
-(This will be provided in the user message part of the prompt)
-
-Instructions for Message Sequence:
-1.  Generate a sequence of ${numMessages} short, distinct messages.
-2.  Adapt the email-focused guideline and the user's core message into this sequence. Each message should be concise.
-3.  Regarding length for each message in the sequence: ${lengthInstruction}
-4.  Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
-5.  After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
-    Example for ${numMessages} messages:
-    MESSAGE 1:
-    [Content of message 1]
-    ${numMessages > 1 ? "---\nMESSAGE 2:\n[Content of message 2]" : ""}
-    ${numMessages > 2 ? "---\nMESSAGE 3:\n[Content of message 3]" : ""}
-    (Ensure the "---" separator is used correctly between messages if more than one.)
-6.  Ensure the messages form a coherent flow.
-7.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
-8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
-9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
-10. **Output Format**: The content of each message must be plain text. Do not use any Markdown formatting. This means:
-    - No bold text (like \`**text**\` or \`__text__\`).
-    - No italic text (like \`*text*\` or \`_text_\`).
-    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
-    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
+The user wants to write an ${outputType} for a "${selectedSituation.replace(/-/g, " ")}" context.
+The general template/guideline for this task is: "${situationTemplates[selectedSituation]}"
+Adapt this guideline for ${outputType === "message_sequence" ? "a short message sequence" : "an email"}.
 `;
-    if (selectedSituation === "meeting-request") {
-      const clientStatus = contextualData.clientStatus;
-
-      if (clientStatus === "existing") {
-        systemPrompt += `\nIMPORTANT (for existing client messages):
-- Keep messages extremely brief and to the point.
-- No company introduction needed. The recipient already knows us.
-- Focus on meeting purpose/logistics.`;
-      } else {
-        // Default to new/prospect if clientStatus is not 'existing' or is undefined
-        systemPrompt += `\nNOTE (for new client messages):
-- Messages should still be very brief.
-- A very short mention of APEXAI's relevance can be included only if absolutely vital for context in a short message format.
-- Focus on meeting purpose/logistics. Avoid company details unless critical.`;
-      }
-    }
   }
-  return systemPrompt;
+
+  return baseSystemPrompt + taskSpecificInstructions;
 }

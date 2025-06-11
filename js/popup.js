@@ -30,6 +30,8 @@ let appState = {
   lastRecipientName: "",
   lastRecipientCompany: "",
   preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY,
+  selectedMeetingAction: "schedule",
+  contextualCache: {},
 };
 
 const mainView = getel("mainView");
@@ -101,6 +103,8 @@ async function initializeApp() {
       lastRecipientCompany: loadedSettings.lastRecipientCompany || "",
       preferredMessageLength:
         loadedSettings.preferredMessageLength || DEFAULT_MESSAGE_LENGTH_KEY,
+      selectedMeetingAction: loadedSettings.selectedMeetingAction || "schedule",
+      contextualCache: loadedSettings.contextualCache || {},
     };
   }
   appState.generateButtonBaseText =
@@ -154,13 +158,8 @@ async function initializeApp() {
     if (activeBtn) {
       activeBtn.classList.add("active");
     }
-    renderContextualInputs(
-      appState.selectedSituation,
-      contextualInputsContainer,
-      appState.lastRecipientName,
-      appState.lastRecipientCompany,
-    );
-    setupContextualInputListeners();
+
+    renderContextualInputsWrapper();
   }
 
   if (settingsMessageLengthSlider && messageLengthOutput) {
@@ -178,6 +177,11 @@ async function initializeApp() {
 }
 
 async function persistAppState() {
+  if (appState.selectedSituation) {
+    const currentContextData = getContextualFormData(contextualInputsContainer);
+    appState.contextualCache = { ...currentContextData };
+  }
+
   const settingsToSave = {
     currentView: appState.currentView,
     selectedProvider: appState.selectedProvider,
@@ -191,6 +195,8 @@ async function persistAppState() {
     lastRecipientName: appState.lastRecipientName,
     lastRecipientCompany: appState.lastRecipientCompany,
     preferredMessageLength: appState.preferredMessageLength,
+    selectedMeetingAction: appState.selectedMeetingAction,
+    contextualCache: appState.contextualCache,
   };
 
   try {
@@ -303,34 +309,45 @@ function updateOutputTypeUI() {
   validateMainForm();
 }
 
-function setupContextualInputListeners() {
-  const recipientNameInput = getel("contextualRecipientName");
-  const recipientCompanyInput = getel("contextualRecipientCompany");
+// Wrapper function to call renderContextualInputs and manage related state
+function renderContextualInputsWrapper() {
+  if (appState.selectedSituation) {
+    renderContextualInputs(
+      appState.selectedSituation,
+      contextualInputsContainer,
+      appState,
+      handleContextualInputChange,
+      handleMeetingActionChange,
+    );
+  } else {
+    contextualInputsContainer.innerHTML = "";
+  }
+  validateMainForm();
+}
 
-  if (recipientNameInput) {
-    recipientNameInput.addEventListener("input", async (e) => {
-      appState.lastRecipientName = e.target.value;
-      await persistAppState();
-    });
+// Callback for general contextual input changes
+async function handleContextualInputChange(event) {
+  const target = event.target;
+  const key = target.dataset.key;
+
+  if (key === "recipientName") {
+    appState.lastRecipientName = target.value;
+  } else if (key === "recipientCompany") {
+    appState.lastRecipientCompany = target.value;
   }
 
-  if (recipientCompanyInput) {
-    recipientCompanyInput.addEventListener("input", async (e) => {
-      appState.lastRecipientCompany = e.target.value;
-      await persistAppState();
-    });
-  }
+  await persistAppState();
+  validateMainForm();
+}
 
-  const clientStatusRadioGroup = contextualInputsContainer.querySelector(
-    ".radio-group[data-key='clientStatus']",
-  );
-  if (clientStatusRadioGroup) {
-    clientStatusRadioGroup.addEventListener("change", (e) => {
-      if (e.target.type === "radio") {
-        validateMainForm();
-      }
-    });
-  }
+// Callback for meeting action select change
+async function handleMeetingActionChange(newAction) {
+  appState.selectedMeetingAction = newAction;
+
+  renderContextualInputsWrapper();
+
+  await persistAppState();
+  validateMainForm();
 }
 
 function setupEventListeners() {
@@ -365,17 +382,16 @@ function setupEventListeners() {
       situationBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       appState.selectedSituation = btn.dataset.situation;
-      renderContextualInputs(
-        appState.selectedSituation,
-        contextualInputsContainer,
-        appState.lastRecipientName,
-        appState.lastRecipientCompany,
-      );
-      setupContextualInputListeners();
+
+      if (appState.selectedSituation !== "meeting-request") {
+        appState.selectedMeetingAction = "schedule";
+      }
+      appState.contextualCache = {};
+      renderContextualInputsWrapper();
       await persistAppState();
-      validateMainForm();
     });
   });
+
   generateBtn.addEventListener("click", generateMessage);
   copyBtn.addEventListener("click", copyToClipboard);
   selectInputBoxBtn.addEventListener("click", handleSelectInputBox);
@@ -423,10 +439,8 @@ function setupEventListeners() {
   if (reviseInputsBtn) {
     reviseInputsBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
-
       await persistAppState();
       renderFocusMode();
-
       generateBtn.innerHTML = appState.generateButtonBaseText;
       validateMainForm();
     });
@@ -436,14 +450,11 @@ function setupEventListeners() {
     resetOutputBtn.addEventListener("click", async () => {
       appState.isFocusOutputMode = false;
       appState.rawLastLlmResponse = "";
-
       outputTextDiv.innerHTML = "";
       outputSectionDiv.classList.remove("show", "error");
       if (selectInputBoxBtn) selectInputBoxBtn.style.display = "none";
-
       await persistAppState();
       renderFocusMode();
-
       generateBtn.innerHTML = appState.generateButtonBaseText;
       validateMainForm();
     });
@@ -659,17 +670,8 @@ function validateMainForm() {
     appState.selectedSituation && userPromptTextarea.value.trim() !== "";
 
   if (appState.selectedSituation === "meeting-request") {
-    const clientStatusRadioGroup = contextualInputsContainer.querySelector(
-      ".radio-group[data-key='clientStatus']",
-    );
-    if (clientStatusRadioGroup) {
-      const checkedRadio = clientStatusRadioGroup.querySelector(
-        "input[type='radio']:checked",
-      );
-      if (!checkedRadio || !checkedRadio.value) {
-        isFormComplete = false;
-      }
-    } else {
+    const contextualData = getContextualFormData(contextualInputsContainer);
+    if (!contextualData.clientStatus) {
       isFormComplete = false;
     }
   }
@@ -711,6 +713,12 @@ async function generateMessage() {
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
 
+  for (const key in contextualData) {
+    if (typeof contextualData[key] === "string") {
+      contextualData[key] = contextualData[key].trim();
+    }
+  }
+
   const systemPrompt = buildSystemPrompt({
     outputType: appState.outputType,
     selectedSituation: appState.selectedSituation,
@@ -749,7 +757,7 @@ async function generateMessage() {
       appState.selectedModel,
       apiKey,
       systemPrompt,
-      userPromptTextarea.value,
+      userPromptTextarea.value.trim(),
       contextualData,
       handleStreamChunk,
     );
