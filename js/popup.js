@@ -5,30 +5,12 @@ import {
   saveEncryptedSettings,
   loadDecryptedSettings,
 } from "./secure_storage.js";
-
-const MESSAGE_LENGTH_OPTIONS = {
-  0: {
-    label: "Very Short",
-    promptInstruction:
-      "Ensure the response is extremely brief and concise, suitable for quick updates or acknowledgements. For emails, 1-2 short sentences. For messages, a few words to one short sentence.",
-  },
-  1: {
-    label: "Short",
-    promptInstruction:
-      "Generate a short and to-the-point response. For emails, aim for 2-3 concise sentences. For messages, one or two brief sentences.",
-  },
-  2: {
-    label: "Medium",
-    promptInstruction:
-      "Produce a standard, professionally balanced response in terms of length and detail. This is the default length.",
-  },
-  3: {
-    label: "Long",
-    promptInstruction:
-      "Provide a slightly more detailed response, offering more context or explanation if necessary, but maintain professional conciseness. Avoid excessive length; aim for clarity and completeness without being verbose.",
-  },
-};
-const DEFAULT_MESSAGE_LENGTH_KEY = "2";
+import {
+  MESSAGE_LENGTH_OPTIONS,
+  DEFAULT_MESSAGE_LENGTH_KEY,
+  getel,
+} from "./constants.js";
+import { buildSystemPrompt } from "./prompt_builder.js";
 
 let appState = {
   currentView: "main",
@@ -50,66 +32,46 @@ let appState = {
   preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY,
 };
 
-const mainView = document.getElementById("mainView");
-const settingsView = document.getElementById("settingsView");
-const inputControlsContainer = document.getElementById(
-  "inputControlsContainer",
-);
-const focusModeActionsContainer = document.getElementById(
-  "focusModeActionsContainer",
-);
-const reviseInputsBtn = document.getElementById("reviseInputsBtn");
-const resetOutputBtn = document.getElementById("resetOutputBtn");
+const mainView = getel("mainView");
+const settingsView = getel("settingsView");
+const inputControlsContainer = getel("inputControlsContainer");
+const focusModeActionsContainer = getel("focusModeActionsContainer");
+const reviseInputsBtn = getel("reviseInputsBtn");
+const resetOutputBtn = getel("resetOutputBtn");
 
-const settingsBtn = document.getElementById("settingsBtn");
-const currentModelDisplay = document.getElementById("currentModelDisplay");
+const settingsBtn = getel("settingsBtn");
+const currentModelDisplay = getel("currentModelDisplay");
 
-const userPromptTextarea = document.getElementById("userPrompt");
-const outputTypeRadioGroup = document.getElementById("outputTypeRadioGroup");
-const numMessagesGroup = document.getElementById("numMessagesGroup");
-const numMessagesRadioGroup = document.getElementById("numMessagesRadioGroup");
-const situationLabel = document.getElementById("situationLabel");
+const userPromptTextarea = getel("userPrompt");
+const outputTypeRadioGroup = getel("outputTypeRadioGroup");
+const numMessagesGroup = getel("numMessagesGroup");
+const numMessagesRadioGroup = getel("numMessagesRadioGroup");
+const situationLabel = getel("situationLabel");
 const situationBtns = document.querySelectorAll(".situation-btn");
-const contextualInputsContainer = document.getElementById(
-  "contextualInputsContainer",
-);
-const generateBtn = document.getElementById("generateBtn");
-const outputSectionDiv = document.getElementById("outputSection");
-const outputTextDiv = document.getElementById("outputText");
-const copyBtn = document.getElementById("copyBtn");
-const selectInputBoxBtn = document.getElementById("selectInputBoxBtn");
+const contextualInputsContainer = getel("contextualInputsContainer");
+const generateBtn = getel("generateBtn");
+const outputSectionDiv = getel("outputSection");
+const outputTextDiv = getel("outputText");
+const copyBtn = getel("copyBtn");
+const selectInputBoxBtn = getel("selectInputBoxBtn");
 
-const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const settingsModelProviderSelect = document.getElementById(
-  "settingsModelProvider",
-);
-const settingsModelVersionSelect = document.getElementById(
-  "settingsModelVersion",
-);
+const closeSettingsBtn = getel("closeSettingsBtn");
+const settingsModelProviderSelect = getel("settingsModelProvider");
+const settingsModelVersionSelect = getel("settingsModelVersion");
 
-const settingsApiKeySectionOpenAI = document.getElementById(
-  "settingsApiKeySectionOpenAI",
-);
-const settingsApiKeyInputOpenAI = document.getElementById(
-  "settingsApiKeyOpenAI",
-);
-const apiKeyStatusOpenAI = document.getElementById("apiKeyStatusOpenAI");
+const settingsApiKeySectionOpenAI = getel("settingsApiKeySectionOpenAI");
+const settingsApiKeyInputOpenAI = getel("settingsApiKeyOpenAI");
+const apiKeyStatusOpenAI = getel("apiKeyStatusOpenAI");
 
-const settingsApiKeySectionGoogle = document.getElementById(
-  "settingsApiKeySectionGoogle",
-);
-const settingsApiKeyInputGoogle = document.getElementById(
-  "settingsApiKeyGoogle",
-);
-const apiKeyStatusGoogle = document.getElementById("apiKeyStatusGoogle");
-const fixedCompanyInfoList = document.getElementById("fixedCompanyInfoList");
-const settingsGlobalStatusP = document.getElementById("settingsGlobalStatus");
-const settingsUserNameInput = document.getElementById("settingsUserName");
+const settingsApiKeySectionGoogle = getel("settingsApiKeySectionGoogle");
+const settingsApiKeyInputGoogle = getel("settingsApiKeyGoogle");
+const apiKeyStatusGoogle = getel("apiKeyStatusGoogle");
+const fixedCompanyInfoList = getel("fixedCompanyInfoList");
+const settingsGlobalStatusP = getel("settingsGlobalStatus");
+const settingsUserNameInput = getel("settingsUserName");
 
-const settingsMessageLengthSlider = document.getElementById(
-  "settingsMessageLength",
-);
-const messageLengthOutput = document.getElementById("messageLengthOutput");
+const settingsMessageLengthSlider = getel("settingsMessageLength");
+const messageLengthOutput = getel("messageLengthOutput");
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
@@ -205,7 +167,7 @@ async function initializeApp() {
     settingsMessageLengthSlider.value = appState.preferredMessageLength;
     messageLengthOutput.textContent =
       MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]?.label ||
-      "Medium";
+      MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].label;
   }
 
   renderCurrentView();
@@ -342,10 +304,8 @@ function updateOutputTypeUI() {
 }
 
 function setupContextualInputListeners() {
-  const recipientNameInput = document.getElementById("contextualRecipientName");
-  const recipientCompanyInput = document.getElementById(
-    "contextualRecipientCompany",
-  );
+  const recipientNameInput = getel("contextualRecipientName");
+  const recipientCompanyInput = getel("contextualRecipientCompany");
 
   if (recipientNameInput) {
     recipientNameInput.addEventListener("input", async (e) => {
@@ -454,7 +414,8 @@ function setupEventListeners() {
       const lengthKey = e.target.value;
       appState.preferredMessageLength = lengthKey;
       messageLengthOutput.textContent =
-        MESSAGE_LENGTH_OPTIONS[lengthKey]?.label || "Medium";
+        MESSAGE_LENGTH_OPTIONS[lengthKey]?.label ||
+        MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].label;
       await persistAppState();
     });
   }
@@ -746,132 +707,22 @@ async function generateMessage() {
 
   let accumulatedResponse = "";
   appState.rawLastLlmResponse = "";
+
   const situationTemplates = getSituationTemplates();
   const contextualData = getContextualFormData(contextualInputsContainer);
-  const writerName = appState.userName ? appState.userName : "an employee";
-  const lengthInstruction =
-    MESSAGE_LENGTH_OPTIONS[appState.preferredMessageLength]
-      ?.promptInstruction ||
-    MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].promptInstruction;
 
-  let systemPrompt = "";
-
-  if (appState.outputType === "email") {
-    systemPrompt = `
-You are an LLM assistant for ${companyInfo.name}.
-Your goal is to help employees write effective emails.
-The email is being written by ${writerName} from APEXAI.
-
-Company Information (Fixed - Do Not Deviate):
-- Name: ${companyInfo.name}
-- Industry: ${companyInfo.industry}
-- Core Services: ${companyInfo.servicesSummary}
-- Detailed Services: ${companyInfo.detailedServices.map((s) => `${s.name}: ${s.tech}`).join("; ")}
-- Unique Value Proposition: "${companyInfo.uniqueValue}"
-- Desired Tone: ${companyInfo.tone}
-- Target Audience: ${companyInfo.targetAudience}
-- Brand Keywords: ${companyInfo.brandVoiceKeywords}
-- Website: ${companyInfo.url}
-- Services Page: ${companyInfo.servicesPage}
-- Projects Page: ${companyInfo.projectsPage}
-
-Task:
-The user wants to write an email for a "${appState.selectedSituation.replace(/-/g, " ")}" context.
-The general template/guideline for this task is: "${situationTemplates[appState.selectedSituation]}"
-
-User's Core Message & Additional Context (if provided):
-(This will be provided in the user message part of the prompt)
-
-Instructions:
-1.  Carefully review all the fixed company information and the user's specific requirements.
-2.  Generate an email that fulfills the task, incorporating relevant company details naturally.
-3.  Adhere to the desired tone: ${companyInfo.tone.toLowerCase()}.
-4.  Regarding length: ${lengthInstruction}
-5.  Ensure the email is tailored to the user's input, the selected situation, and any additional context provided by the user for this specific message type.
-6.  If the user's requirements are vague, make reasonable assumptions based on the company context.
-7.  The output should be ONLY the generated email, ready to be copied and pasted. Do not include any of these instructions or preamble in the response.
-8.  **Output Format**: The entire email body must be plain text. Do not use any Markdown formatting. This means:
-    - No bold text (like \`**text**\` or \`__text__\`).
-    - No italic text (like \`*text*\` or \`_text_\`).
-    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
-    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
-    - No Markdown headers (using \`#\`).
-`;
-    if (appState.selectedSituation === "meeting-request") {
-      const clientStatus = contextualData.clientStatus;
-
-      if (clientStatus === "existing") {
-        systemPrompt += `\nIMPORTANT: This meeting request is for an EXISTING client.
-- Be very concise and direct.
-- DO NOT include a general company overview or introduction of ${companyInfo.name}. The recipient already knows us.
-- Focus solely on the meeting's purpose, proposed agenda (if any from user), and logistics.
-- Maintain a professional and familiar tone suitable for an existing relationship.`;
-      } else {
-        systemPrompt += `\nNOTE: This meeting request might be for a new contact or someone less familiar with ${companyInfo.name}.
-- If appropriate and brief, you can subtly weave in what ${companyInfo.name} does if it directly relates to the meeting's purpose.
-- However, the primary focus remains on the meeting request itself: purpose, agenda (if any from user), logistics.
-- Avoid a lengthy company introduction. Keep any company mention extremely brief and highly relevant.`;
-      }
-    }
-  } else {
-    const numMessages = appState.numMessagesForSequence;
-    systemPrompt = `
-You are an LLM assistant for ${companyInfo.name}.
-Your goal is to help ${writerName} write a sequence of effective short messages for platforms like Discord, WhatsApp, or Slack.
-
-Company Information (Fixed - Do Not Deviate):
-- Name: ${companyInfo.name}
-- Industry: ${companyInfo.industry}
-- Core Services (briefly, if relevant for short messages): ${companyInfo.servicesSummary}
-- Unique Value Proposition (if adaptable to short form): "${companyInfo.uniqueValue}"
-- Desired Tone: ${companyInfo.tone} (adapt for brevity on chat platforms)
-- Website: ${companyInfo.url}
-
-Task:
-The user wants to write a sequence of short messages for a "${appState.selectedSituation.replace(/-/g, " ")}" context.
-The general email-focused guideline for this task is: "${situationTemplates[appState.selectedSituation]}"
-
-User's Core Message & Additional Context (if provided):
-(This will be provided in the user message part of the prompt)
-
-Instructions for Message Sequence:
-1.  Generate a sequence of ${numMessages} short, distinct messages.
-2.  Adapt the email-focused guideline and the user's core message into this sequence. Each message should be concise.
-3.  Regarding length for each message in the sequence: ${lengthInstruction}
-4.  Each message MUST start with a label: "MESSAGE 1:", "MESSAGE 2:", etc., on its own line.
-5.  After each complete message (including its label and content), if it is NOT the last message in the sequence, add a new line containing only "---" to act as a separator.
-    Example for ${numMessages} messages:
-    MESSAGE 1:
-    [Content of message 1]
-    ${numMessages > 1 ? "---\nMESSAGE 2:\n[Content of message 2]" : ""}
-    ${numMessages > 2 ? "---\nMESSAGE 3:\n[Content of message 3]" : ""}
-    (Ensure the "---" separator is used correctly between messages if more than one.)
-6.  Ensure the messages form a coherent flow.
-7.  Incorporate relevant company details naturally and very briefly, only if appropriate for short messages.
-8.  Adhere to the desired tone (${companyInfo.tone.toLowerCase()}), but keep messages concise and suitable for informal chat platforms.
-9.  The output should ONLY be the generated messages with their labels and separators as specified. Do not include any of these instructions or preamble in the response.
-10. **Output Format**: The content of each message must be plain text. Do not use any Markdown formatting. This means:
-    - No bold text (like \`**text**\` or \`__text__\`).
-    - No italic text (like \`*text*\` or \`_text_\`).
-    - No Markdown links (like \`[link text](URL)\`). If a URL is necessary, write it out directly (e.g., https://www.example.com).
-    - No Markdown lists (using \`*\`, \`-\`, or numbered lists).
-`;
-    if (appState.selectedSituation === "meeting-request") {
-      const clientStatus = contextualData.clientStatus;
-
-      if (clientStatus === "existing") {
-        systemPrompt += `\nIMPORTANT (for existing client messages):
-- Keep messages extremely brief and to the point.
-- No company introduction needed. The recipient already knows us.
-- Focus on meeting purpose/logistics.`;
-      } else {
-        systemPrompt += `\nNOTE (for new client messages):
-- Messages should still be very brief.
-- A very short mention of APEXAI's relevance can be included only if absolutely vital for context in a short message format.
-- Focus on meeting purpose/logistics. Avoid company details unless critical.`;
-      }
-    }
-  }
+  const systemPrompt = buildSystemPrompt({
+    outputType: appState.outputType,
+    selectedSituation: appState.selectedSituation,
+    numMessagesForSequence: appState.numMessagesForSequence,
+    userName: appState.userName,
+    preferredMessageLengthKey: appState.preferredMessageLength,
+    companyInfo: companyInfo,
+    situationTemplates: situationTemplates,
+    messageLengthOptions: MESSAGE_LENGTH_OPTIONS,
+    contextualData: contextualData,
+    defaultMessageLengthKey: DEFAULT_MESSAGE_LENGTH_KEY,
+  });
 
   try {
     const apiKey = appState.apiKeys[appState.selectedProvider];
@@ -902,6 +753,7 @@ Instructions for Message Sequence:
       contextualData,
       handleStreamChunk,
     );
+
     appState.rawLastLlmResponse = fullResponse || accumulatedResponse;
 
     let finalCleanedResponse = appState.rawLastLlmResponse;
@@ -927,6 +779,8 @@ Instructions for Message Sequence:
       error.message.includes("missing")
     ) {
       errorMessage += " Please check your API key in Settings.";
+    } else if (error.message.includes("Google API Error")) {
+      errorMessage = error.message;
     } else {
       errorMessage += " Check console for details.";
     }
@@ -993,13 +847,32 @@ function displayOutput(rawContent, isError = false, outputType = "email") {
 
 async function copyToClipboard() {
   let textToCopy = appState.rawLastLlmResponse;
+  const placeholderText = "No content generated.";
 
-  if (appState.outputType === "message_sequence" && textToCopy) {
+  const isLikelyErrorMessage = outputSectionDiv.classList.contains("error");
+
+  if (
+    appState.outputType === "message_sequence" &&
+    textToCopy &&
+    textToCopy !== placeholderText &&
+    !isLikelyErrorMessage
+  ) {
     const parts = textToCopy.split(/\n---\n/);
     const cleanedMessages = parts
       .map((part) => part.replace(/^MESSAGE \d+:\s*\n?/i, "").trim())
       .filter((content) => content.length > 0);
     textToCopy = cleanedMessages.join("\n\n");
+  } else if (textToCopy === placeholderText || !textToCopy) {
+    return;
+  }
+
+  if (textToCopy) {
+    textToCopy = textToCopy
+      .replace(/\*\*(.*?)\*\*/gs, "$1")
+      .replace(/\*(.*?)\*/gs, "$1")
+      .replace(/__(.*?)__/gs, "$1")
+      .replace(/_(.*?)_/gs, "$1")
+      .replace(/\[(.*?)\]\((.*?)\)/gs, "$1 ($2)");
   }
 
   if (!textToCopy) return;
@@ -1022,21 +895,41 @@ async function copyToClipboard() {
 async function handleSelectInputBox() {
   let textToPaste = appState.rawLastLlmResponse;
   const placeholderText = "No content generated.";
+  const isLikelyErrorMessage = outputSectionDiv.classList.contains("error");
 
   if (
     appState.outputType === "message_sequence" &&
     textToPaste &&
-    textToPaste !== placeholderText
+    textToPaste !== placeholderText &&
+    !isLikelyErrorMessage
   ) {
     const parts = textToPaste.split(/\n---\n/);
     const cleanedMessages = parts
       .map((part) => part.replace(/^MESSAGE \d+:\s*\n?/i, "").trim())
       .filter((content) => content.length > 0);
     textToPaste = cleanedMessages.join("\n\n");
+  } else if (
+    textToPaste === placeholderText ||
+    !textToPaste ||
+    isLikelyErrorMessage
+  ) {
+    console.warn(
+      "No actual text to paste for selection or text is an error message.",
+    );
+    return;
   }
 
-  if (!textToPaste || textToPaste === placeholderText) {
-    console.warn("No actual text to paste for selection.");
+  if (textToPaste) {
+    textToPaste = textToPaste
+      .replace(/\*\*(.*?)\*\*/gs, "$1")
+      .replace(/\*(.*?)\*/gs, "$1")
+      .replace(/__(.*?)__/gs, "$1")
+      .replace(/_(.*?)_/gs, "$1")
+      .replace(/\[(.*?)\]\((.*?)\)/gs, "$1 ($2)");
+  }
+
+  if (!textToPaste) {
+    console.warn("Text became empty after cleaning, nothing to paste.");
     return;
   }
 
@@ -1072,7 +965,7 @@ This might be a protected page (e.g., Chrome Web Store, chrome:// pages).`,
         if (injectionResults && injectionResults.some((frame) => frame.error)) {
           console.error(
             "Error during script execution in one of the frames:",
-            injectionResults,
+            injectionResults.find((frame) => frame.error).error,
           );
         }
 
@@ -1092,7 +985,7 @@ This might be a protected page (e.g., Chrome Web Store, chrome:// pages).`,
               console.log("Content script initiated input selection mode.");
             } else {
               console.log(
-                "Content script response (or no response):",
+                "Content script response (or no response/unexpected response):",
                 response,
               );
             }
