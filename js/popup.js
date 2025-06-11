@@ -1,4 +1,10 @@
-import { modelConfigs, companyInfo, getSituationTemplates } from "./config.js";
+import {
+  modelConfigs,
+  companyInfo,
+  getSituationTemplates,
+  TONE_OPTIONS,
+  DEFAULT_TONE,
+} from "./config.js";
 import { renderContextualInputs, getContextualFormData } from "./ui.js";
 import { callLlmProvider } from "./llm.js";
 import {
@@ -30,6 +36,7 @@ let appState = {
   lastRecipientName: "",
   lastRecipientCompany: "",
   preferredMessageLength: DEFAULT_MESSAGE_LENGTH_KEY,
+  preferredTone: DEFAULT_TONE, // Added preferredTone
   selectedMeetingAction: "schedule",
   contextualCache: {},
 };
@@ -74,6 +81,7 @@ const settingsUserNameInput = getel("settingsUserName");
 
 const settingsMessageLengthSlider = getel("settingsMessageLength");
 const messageLengthOutput = getel("messageLengthOutput");
+const settingsToneSelect = getel("settingsTone"); // Added tone select element
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
@@ -103,6 +111,7 @@ async function initializeApp() {
       lastRecipientCompany: loadedSettings.lastRecipientCompany || "",
       preferredMessageLength:
         loadedSettings.preferredMessageLength || DEFAULT_MESSAGE_LENGTH_KEY,
+      preferredTone: loadedSettings.preferredTone || DEFAULT_TONE, // Load preferredTone
       selectedMeetingAction: loadedSettings.selectedMeetingAction || "schedule",
       contextualCache: loadedSettings.contextualCache || {},
     };
@@ -169,6 +178,17 @@ async function initializeApp() {
       MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].label;
   }
 
+  // Populate and set tone select
+  if (settingsToneSelect) {
+    TONE_OPTIONS.forEach((tone) => {
+      const option = document.createElement("option");
+      option.value = tone.value;
+      option.textContent = tone.label;
+      settingsToneSelect.appendChild(option);
+    });
+    settingsToneSelect.value = appState.preferredTone;
+  }
+
   renderCurrentView();
   setupEventListeners();
   updateCurrentModelDisplay();
@@ -195,6 +215,7 @@ async function persistAppState() {
     lastRecipientName: appState.lastRecipientName,
     lastRecipientCompany: appState.lastRecipientCompany,
     preferredMessageLength: appState.preferredMessageLength,
+    preferredTone: appState.preferredTone, // Save preferredTone
     selectedMeetingAction: appState.selectedMeetingAction,
     contextualCache: appState.contextualCache,
   };
@@ -432,6 +453,14 @@ function setupEventListeners() {
       messageLengthOutput.textContent =
         MESSAGE_LENGTH_OPTIONS[lengthKey]?.label ||
         MESSAGE_LENGTH_OPTIONS[DEFAULT_MESSAGE_LENGTH_KEY].label;
+      await persistAppState();
+    });
+  }
+
+  // Event listener for tone select
+  if (settingsToneSelect) {
+    settingsToneSelect.addEventListener("change", async (e) => {
+      appState.preferredTone = e.target.value;
       await persistAppState();
     });
   }
@@ -725,6 +754,7 @@ async function generateMessage() {
     numMessagesForSequence: appState.numMessagesForSequence,
     userName: appState.userName,
     preferredMessageLengthKey: appState.preferredMessageLength,
+    preferredTone: appState.preferredTone, // Pass preferredTone
     companyInfo: companyInfo,
     situationTemplates: situationTemplates,
     messageLengthOptions: MESSAGE_LENGTH_OPTIONS,

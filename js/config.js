@@ -86,7 +86,7 @@ export const companyInfo = {
   industry: "AI Development & Full-Stack Solutions",
   uniqueValue:
     "We deliver cutting-edge AI and web solutions with a focus on practical application and seamless integration.",
-  tone: "Professional, innovative, and client-focused",
+  tone: "Professional, innovative, and client-focused", // This is the default company tone
   targetAudience:
     "Businesses seeking custom AI solutions, automation, or advanced web applications.",
   brandVoiceKeywords:
@@ -97,10 +97,21 @@ export const companyInfo = {
 // These templates are primarily for emails, but the system prompt for message sequences
 // will instruct the LLM to adapt them.
 export const getSituationTemplates = () => ({
-  "cold-email": `Write a professional cold email that introduces our ${companyInfo.industry} company, ${companyInfo.name}. Focus on how our services (${companyInfo.servicesSummary}) can benefit the recipient. Keep it concise, personalized, and include a clear call-to-action. Use a ${companyInfo.tone} tone. Mention our website ${companyInfo.url} for more details.`,
-  followup: `Write a polite follow-up message. Reference previous communication or a recent interaction. Provide additional value or a new piece of information. Maintain engagement without being pushy. Our company is ${companyInfo.name}. Our tone is ${companyInfo.tone}.`,
-  "pitch-agency": `Create an agency pitch for ${companyInfo.name}. Highlight our expertise in services like ${companyInfo.servicesSummary}. Emphasize our unique value proposition: "${companyInfo.uniqueValue}". Tailor the pitch to address common client pain points in our industry. The tone should be ${companyInfo.tone}.`,
+  "cold-email": `Write a professional cold email that introduces our ${companyInfo.industry} company, ${companyInfo.name}. Focus on how our services (${companyInfo.servicesSummary}) can benefit the recipient. Keep it concise, personalized, and include a clear call-to-action. Mention our website ${companyInfo.url} for more details.`,
+  followup: `Write a polite follow-up message. Reference previous communication or a recent interaction. Provide additional value or a new piece of information. Maintain engagement without being pushy. Our company is ${companyInfo.name}.`,
+  "pitch-agency": `Create an agency pitch for ${companyInfo.name}. Highlight our expertise in services like ${companyInfo.servicesSummary}. Emphasize our unique value proposition: "${companyInfo.uniqueValue}". Tailor the pitch to address common client pain points in our industry.`,
   proposal: `Draft a section for a professional proposal for ${companyInfo.name}. This section should clearly articulate how our services (e.g., ${companyInfo.detailedServices.map((s) => s.name).join(", ")}) directly address the client's stated needs and objectives. Focus on benefits and outcomes. Our unique value is: "${companyInfo.uniqueValue}".`,
-  "meeting-request": `Write a professional meeting request from ${companyInfo.name}. Clearly state the purpose of the meeting, suggest a brief agenda, and offer flexible timing. Respect the recipient's time. Our tone is ${companyInfo.tone}.`,
-  "thank-you": `Compose a genuine thank-you message from ${companyInfo.name}. Express appreciation for a specific action or opportunity (e.g., a meeting, a referral, their business). Reinforce our professional relationship and commitment. The tone should be ${companyInfo.tone}.`,
+  "meeting-request": `Write a professional meeting request from ${companyInfo.name}. Clearly state the purpose of the meeting, suggest a brief agenda, and offer flexible timing. Respect the recipient's time.`,
+  "thank-you": `Compose a genuine thank-you message from ${companyInfo.name}. Express appreciation for a specific action or opportunity (e.g., a meeting, a referral, their business). Reinforce our professional relationship and commitment.`,
 });
+
+export const TONE_OPTIONS = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "friendly", label: "Friendly" },
+  { value: "formal", label: "Formal" },
+  { value: "sarcastic", label: "Sarcastic (Use with caution!)" },
+  { value: "angry", label: "Angry (Use with extreme caution!)" },
+];
+
+export const DEFAULT_TONE = "professional";

@@ -265,6 +265,7 @@ export async function loadDecryptedSettings() {
   if (settings) {
     settings.outputType = settings.outputType || "email";
     settings.numMessagesForSequence = settings.numMessagesForSequence || 2;
+    settings.preferredTone = settings.preferredTone || "professional";
   }
 
   return settings;

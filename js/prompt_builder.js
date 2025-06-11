@@ -10,6 +10,7 @@
  * @param {number} promptData.numMessagesForSequence - Number of messages for a sequence.
  * @param {string} promptData.userName - The name of the user/writer.
  * @param {string} promptData.preferredMessageLengthKey - Key for preferred message length.
+ * @param {string} promptData.preferredTone - The user-selected tone for the message.
  * @param {object} promptData.companyInfo - The company information object.
  * @param {object} promptData.situationTemplates - The situation templates object.
  * @param {object} promptData.messageLengthOptions - The message length options object.
@@ -23,6 +24,7 @@ export function buildSystemPrompt({
   numMessagesForSequence,
   userName,
   preferredMessageLengthKey,
+  preferredTone, // Added preferredTone
   companyInfo,
   situationTemplates,
   messageLengthOptions,
@@ -34,6 +36,10 @@ export function buildSystemPrompt({
     messageLengthOptions[preferredMessageLengthKey]?.promptInstruction ||
     messageLengthOptions[defaultMessageLengthKey].promptInstruction;
 
+  // Determine the primary tone for this message
+  const primaryTone = preferredTone || companyInfo.tone;
+  const toneInstruction = `Adopt a ${primaryTone} tone for your response. This is the primary tone to use for this specific message. If the selected tone is 'sarcastic' or 'angry', apply it subtly and professionally, suitable for a business context unless the user's core message implies otherwise. Extreme sarcasm or anger should be avoided unless explicitly and strongly requested by the user's core message. While generating the messages remember to not use any heavy words and corporate jargons. Let the response be authentic and simple and stright to the point. Avoid big or complex words. No corporate jargon or fluff. Keep the message authentic and easy to understand, like you're talking to a colleague or a friend. Focus on clarity, brevity, and tone. The message should feel natural and real, not robotic or over-polished.`;
+
   let baseSystemPrompt = `
 You are an LLM assistant for ${companyInfo.name}.
 Your goal is to help ${writerName} from APEXAI write effective ${outputType === "email" ? "emails" : "short messages"}.
@@ -44,7 +50,6 @@ Company Information (Fixed - Do Not Deviate):
 - Core Services: ${companyInfo.servicesSummary}
 - Detailed Services: ${companyInfo.detailedServices.map((s) => `${s.name}: ${s.tech}`).join("; ")}
 - Unique Value Proposition: "${companyInfo.uniqueValue}"
-- Desired Tone: ${companyInfo.tone}
 - Target Audience: ${companyInfo.targetAudience}
 - Brand Keywords: ${companyInfo.brandVoiceKeywords}
 - Website: ${companyInfo.url}
@@ -54,7 +59,7 @@ Company Information (Fixed - Do Not Deviate):
 General Instructions:
 1.  Carefully review all fixed company information and the user's specific requirements.
 2.  Generate content that fulfills the task, incorporating relevant company details naturally and only where appropriate.
-3.  Adhere to the desired tone: ${companyInfo.tone.toLowerCase()}.
+3.  Regarding tone: ${toneInstruction}
 4.  Regarding length: ${lengthInstruction}
 5.  Ensure the output is tailored to the user's input, the selected situation, and all additional context provided.
 6.  If the user's requirements are vague, make reasonable assumptions based on the company context and the specific task.
@@ -101,7 +106,7 @@ Instructions for Message Sequence:
     taskSpecificInstructions += `Client Status: ${clientStatus || "Not specified"}.\n`;
 
     if (clientStatus === "existing") {
-      taskSpecificInstructions += `- For EXISTING clients: Be concise, direct. No general company intro. Focus on the meeting action. Maintain a professional, familiar tone.\n`;
+      taskSpecificInstructions += `- For EXISTING clients: Be concise, direct. No general company intro. Focus on the meeting action. Maintain a professional, familiar tone (unless overridden by user's preferred tone).\n`;
     } else {
       taskSpecificInstructions += `- For NEW/PROSPECT clients: Subtly weave in ${companyInfo.name}'s relevance if it directly relates to the meeting's purpose, but keep it brief. Primary focus is the meeting action.\n`;
     }
@@ -147,11 +152,14 @@ Instructions for Message Sequence:
 - ${situationTemplates["meeting-request"]}`;
     }
   } else {
+    // For other situations, the base template already implies a tone, but the user's selected tone should still be primary.
+    // The general instruction for tone will cover this.
     taskSpecificInstructions = `
 Task:
 The user wants to write an ${outputType} for a "${selectedSituation.replace(/-/g, " ")}" context.
-The general template/guideline for this task is: "${situationTemplates[selectedSituation]}"
+The general guideline for this task is: "${situationTemplates[selectedSituation]}"
 Adapt this guideline for ${outputType === "message_sequence" ? "a short message sequence" : "an email"}.
+Remember to prioritize the user's selected tone: ${primaryTone}.
 `;
   }
 
